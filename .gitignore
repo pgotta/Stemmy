@@ -1,0 +1,22 @@
+# --- Stemmy ignores ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# generated at runtime
+projects/*
+!projects/.gitkeep
+uploads/*
+!uploads/.gitkeep
+models_cache/
+
+# local launchers kept off GitHub
+*.bat
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

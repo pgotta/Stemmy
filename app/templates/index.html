@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Stemmy — stem separation studio</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cdefs%3E%3CradialGradient%20id='g'%20cx='30%25'%20cy='25%25'%20r='95%25'%3E%3Cstop%20offset='0'%20stop-color='%2348f08c'/%3E%3Cstop%20offset='1'%20stop-color='%231f7d49'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect%20width='24'%20height='24'%20rx='6'%20fill='url%28%23g%29'/%3E%3Cpath%20d='M4%2012h2l2-6%203%2015%203-12%202%206h4'%20fill='none'%20stroke='%2304140b'%20stroke-width='2.2'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#070b09;
+    --bg-grad:#0a120d;
+    --panel:#0e1411;
+    --panel-2:#121a15;
+    --panel-3:#16201a;
+    --line:#1e2b23;
+    --line-soft:#172019;
+    --text:#dcecde;
+    --muted:#7b9282;
+    --muted-2:#56685c;
+    --green:#36e27e;--green-rgb:54,226,126;
+    --green-dim:#1f7d49;
+    --green-deep:#0c3a22;
+    --lime:#b6f04a;
+    --teal:#2dd4bf;
+    --aqua:#5eead4;
+    --leaf:#7ee787;
+    --warn:#f0b54a;
+    --danger:#ff6b6b;
+    --radius:13px;
+    --radius-sm:9px;
+    --sans:"Inter","Segoe UI",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+    --mono:"JetBrains Mono","SFMono-Regular","SF Mono",Consolas,"Liberation Mono",ui-monospace,monospace;
+    --shadow:0 18px 50px -20px rgba(0,0,0,.85);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:var(--sans);
+    color:var(--text);
+    background:
+      radial-gradient(1200px 600px at 78% -8%, rgba(var(--green-rgb),.10), transparent 60%),
+      radial-gradient(900px 500px at 8% 110%, rgba(45,212,191,.07), transparent 55%),
+      linear-gradient(180deg,var(--bg-grad),var(--bg));
+    background-attachment:fixed;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+  .mono{font-family:var(--mono)}
+  button{font-family:inherit;color:inherit;cursor:pointer;border:none;background:none}
+  ::selection{background:rgba(var(--green-rgb),.3)}
+
+  /* ---------- shell ---------- */
+  .app{display:flex;flex-direction:column;height:100vh}
+
+  /* ---------- topbar ---------- */
+  .topbar{
+    display:flex;align-items:center;gap:22px;
+    padding:13px 22px;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(18,26,21,.92),rgba(10,16,12,.92));
+    backdrop-filter:blur(8px);
+  }
+  .brand{display:flex;align-items:center;gap:11px;flex-shrink:0}
+  .logo{
+    width:30px;height:30px;border-radius:8px;position:relative;
+    background:radial-gradient(circle at 30% 25%,#48f08c,var(--green-dim));
+    box-shadow:0 0 0 1px rgba(var(--green-rgb),.4),0 0 18px -2px rgba(var(--green-rgb),.55);
+    display:grid;place-items:center;
+  }
+  .logo svg{width:18px;height:18px}
+  .brand h1{font-size:17px;margin:0;font-weight:650;letter-spacing:-.3px}
+  .brand h1 b{color:var(--green);font-weight:650}
+  .brand .tag{font-size:10px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:1px}
+
+  .proj{
+    display:flex;align-items:center;gap:12px;
+    padding:6px 13px;border:1px solid var(--line);border-radius:10px;
+    background:rgba(8,12,10,.5);min-width:0;
+  }
+  .proj .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex-shrink:0}
+  .proj .name{font-size:13px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .proj .meta{font-size:11px;color:var(--muted);white-space:nowrap}
+
+  .spacer{flex:1}
+
+  .topstat{display:flex;align-items:center;gap:18px;flex-shrink:0}
+  .stat{display:flex;flex-direction:column;line-height:1.15}
+  .stat .k{font-size:9.5px;color:var(--muted-2);letter-spacing:.13em;text-transform:uppercase}
+  .stat .v{font-size:14px;color:var(--text)}
+  .stat .v b{color:var(--green)}
+
+  .iconbtn{
+    width:34px;height:34px;border-radius:9px;border:1px solid var(--line);
+    background:rgba(8,12,10,.5);display:grid;place-items:center;color:var(--muted);
+    transition:.16s;
+  }
+  .iconbtn:hover{color:var(--green);border-color:var(--green-dim);background:rgba(var(--green-rgb),.07)}
+  .iconbtn svg{width:17px;height:17px}
+
+  /* ---------- body split ---------- */
+  .body{display:flex;flex:1;min-height:0}
+
+  /* step rail */
+  .rail{
+    width:202px;flex-shrink:0;border-right:1px solid var(--line);
+    padding:20px 14px;display:flex;flex-direction:column;gap:5px;
+    background:linear-gradient(180deg,rgba(14,20,17,.55),rgba(7,11,9,.2));
+  }
+  .rail .lbl{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2);padding:0 8px 10px}
+  .step{
+    display:flex;align-items:center;gap:12px;padding:11px 11px;border-radius:10px;
+    color:var(--muted);transition:.15s;border:1px solid transparent;text-align:left;width:100%;
+  }
+  .step:hover{background:rgba(var(--green-rgb),.05);color:var(--text)}
+  .step .num{
+    width:24px;height:24px;border-radius:7px;flex-shrink:0;display:grid;place-items:center;
+    font-family:var(--mono);font-size:12px;border:1px solid var(--line);background:rgba(0,0,0,.25);
+  }
+  .step .txt{display:flex;flex-direction:column;line-height:1.25}
+  .step .txt small{font-size:10.5px;color:var(--muted-2)}
+  .step.done{color:var(--text)}
+  .step.done .num{background:var(--green-deep);border-color:var(--green-dim);color:var(--green)}
+  .step.active{background:linear-gradient(90deg,rgba(var(--green-rgb),.14),rgba(var(--green-rgb),.03));border-color:var(--green-dim);color:#fff}
+  .step.active .num{background:var(--green);border-color:var(--green);color:#04140b;box-shadow:0 0 16px -3px var(--green)}
+
+  .rail .foot{margin-top:auto;padding:13px 9px 4px;border-top:1px solid var(--line-soft);font-size:11px;color:var(--muted-2);line-height:1.5}
+  .rail .foot b{color:var(--muted)}
+  .gpu{display:flex;align-items:center;gap:7px;margin-top:9px}
+  .gpu .bar{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden}
+  .gpu .bar i{display:block;height:100%;width:62%;background:linear-gradient(90deg,var(--teal),var(--green));border-radius:3px}
+
+  /* ---------- views ---------- */
+  .stage{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
+  .view{display:none;flex:1;min-height:0;flex-direction:column}
+  .view.show{display:flex}
+
+  /* ===== STUDIO VIEW ===== */
+  .studio-scroll{flex:1;overflow-y:auto;padding:0 22px 14px}
+  .studio-scroll::-webkit-scrollbar{width:10px}
+  .studio-scroll::-webkit-scrollbar-thumb{background:#1d2a22;border-radius:6px;border:3px solid var(--bg)}
+
+  /* tempo strip */
+  .tempo{
+    display:flex;align-items:stretch;gap:0;margin-bottom:16px;
+    border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  }
+  .tempo .block{padding:13px 18px;border-right:1px solid var(--line-soft);display:flex;flex-direction:column;justify-content:center;gap:3px}
+  .tempo .block .k{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted-2)}
+  .tempo .bpm{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--green);line-height:1;letter-spacing:-1px}
+  .tempo .bpm small{font-size:12px;color:var(--muted);font-weight:400}
+  .tempo .keyv{font-family:var(--mono);font-size:22px;color:var(--lime);line-height:1}
+  .tempo .grid{flex:1;position:relative;padding:12px 16px;display:flex;flex-direction:column;justify-content:center;gap:7px;min-width:0}
+  .tempo .grid .lab{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted-2)}
+  .beatgrid{display:flex;align-items:flex-end;gap:3px;height:30px}
+  .beatgrid i{flex:1;background:rgba(var(--green-rgb),.18);border-radius:2px 2px 0 0;min-width:2px}
+  .beatgrid i.down{background:var(--green);box-shadow:0 0 8px -1px var(--green)}
+  .beatgrid{position:relative;cursor:pointer}
+  .beatgrid .gridph{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 6px var(--green);left:0;pointer-events:none}
+  .srow{display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:13px;border-bottom:1px solid rgba(255,255,255,.04)}
+  .srow span{color:var(--muted)} .srow b{text-align:right}
+  #cogov code{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px}
+  .zoomctl{display:flex;align-items:center;gap:7px;color:var(--muted)}
+  .zoomctl input[type=range]{width:90px;accent-color:var(--green);cursor:pointer}
+  .zoomctl b{font-size:11px;color:var(--muted);min-width:24px}
+  .tempo .ctrls{display:flex;align-items:center;gap:8px;padding:0 16px;border-left:1px solid var(--line-soft)}
+  .pill{
+    display:flex;align-items:center;gap:7px;padding:8px 13px;border-radius:9px;
+    border:1px solid var(--line);background:rgba(0,0,0,.25);font-size:12px;color:var(--muted);transition:.15s;
+  }
+  .pill:hover{color:var(--text);border-color:var(--green-dim)}
+  .pill.on{color:#04140b;background:var(--green);border-color:var(--green);font-weight:600}
+  .pill svg{width:15px;height:15px}
+
+  /* channels */
+  .chan-head{display:flex;align-items:center;justify-content:space-between;margin:2px 2px 11px}
+  .studio-top{position:sticky;top:0;z-index:6;background:var(--bg);
+    margin:0 -22px 0;padding:18px 22px 9px;border-bottom:1px solid var(--line)}
+  .sortctl{display:inline-flex;margin-left:12px;border:1px solid var(--line);border-radius:7px;
+    overflow:hidden;vertical-align:middle}
+  .sortctl button{background:var(--panel-2);color:var(--muted);border:none;font-size:11px;
+    padding:3px 11px;cursor:pointer;font-family:inherit;font-weight:500}
+  .sortctl button.on{background:var(--green-deep);color:var(--green)}
+  .sortctl button:hover:not(.on){color:var(--text)}
+  .hidetgl{margin-left:10px;font-size:11px;font-weight:500;color:var(--muted);background:var(--panel-2);
+    border:1px solid var(--line);border-radius:7px;padding:3px 11px;cursor:pointer;transition:.14s}
+  .hidetgl.on{background:var(--green-deep);color:var(--green);border-color:color-mix(in srgb,var(--green) 35%,var(--line))}
+  .hidetgl:hover:not(.on){color:var(--text)}
+  .hidectl{display:inline-flex;align-items:center;gap:7px;margin-left:12px;font-size:11px;color:var(--muted);
+    background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:2px 9px;vertical-align:middle}
+  .hidectl .hl{color:var(--muted-2);font-family:var(--mono)}
+  .hidectl input[type=number]{width:62px;background:var(--bg);border:1px solid var(--line);border-radius:5px;
+    color:var(--green);font-family:var(--mono);font-size:11px;padding:2px 5px;outline:none}
+  .hidectl input[type=range]{width:96px;accent-color:var(--green);cursor:pointer}
+  .channel.inactive-hidden{display:none}
+  .chan-head .t{font-size:13px;font-weight:600;letter-spacing:.02em}
+  .chan-head .t span{color:var(--muted);font-weight:400}
+  .chan-head .legend{display:flex;gap:14px;font-size:11px;color:var(--muted-2)}
+  .chan-head .legend i{display:inline-flex;align-items:center;gap:5px}
+  .chan-head .legend b{width:9px;height:9px;border-radius:3px;display:inline-block}
+
+  .channel{
+    border:1px solid var(--line);border-radius:var(--radius);margin-bottom:9px;
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    transition:.18s;overflow:hidden;position:relative;
+  }
+  .channel.group{border-color:var(--line)}
+  .channel:hover{border-color:color-mix(in srgb,var(--green) 30%,var(--line))}
+  .channel.dim{opacity:.4}
+  .channel.soloed{border-color:var(--green);box-shadow:0 0 0 1px var(--green),0 0 26px -10px var(--green)}
+
+  .row{display:flex;align-items:center;gap:14px;padding:12px 15px}
+  .sub .row{padding:9px 15px 9px 30px}
+
+  .sel{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--line);flex-shrink:0;display:grid;place-items:center;transition:.14s;color:transparent}
+  .sel.on{background:var(--clr);border-color:var(--clr);color:#06120b}
+  .sel svg{width:11px;height:11px}
+
+  .grip{display:flex;align-items:center;gap:11px;width:188px;flex-shrink:0;min-width:0}
+  .swatch{width:30px;height:30px;border-radius:8px;flex-shrink:0;display:grid;place-items:center;background:color-mix(in srgb,var(--clr) 16%,transparent);border:1px solid color-mix(in srgb,var(--clr) 35%,transparent)}
+  .swatch svg{width:16px;height:16px;color:var(--clr)}
+  .sub .swatch{width:23px;height:23px}.sub .swatch svg{width:13px;height:13px}
+  .nm{min-width:0}
+  .nm .n{font-size:13.5px;font-weight:560;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:7px}
+  .sub .nm .n{font-size:12.5px;font-weight:500}
+  .nm .sz{font-family:var(--mono);font-size:10.5px;color:var(--muted-2)}
+  .beta{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);padding:1px 5px;border-radius:5px;background:color-mix(in srgb,var(--warn) 12%,transparent)}
+  .chev{width:20px;height:20px;display:grid;place-items:center;color:var(--muted);border-radius:5px;transition:.2s;flex-shrink:0}
+  .chev svg{width:13px;height:13px;transition:transform .22s}
+  .channel.open .chev svg{transform:rotate(90deg)}
+  .chev.spacer-chev{visibility:hidden}
+
+  .wave{flex:1;height:46px;position:relative;min-width:60px;border-radius:7px;overflow:hidden;background:rgba(0,0,0,.22)}
+  .sub .wave{height:34px}
+  .wave canvas{position:absolute;inset:0;width:100%;height:100%}
+  .playhead{position:absolute;top:0;bottom:0;width:1.5px;background:var(--green);box-shadow:0 0 7px var(--green);left:21%;opacity:.9;pointer-events:none}
+
+  .lvl{width:118px;flex-shrink:0;display:flex;align-items:center;gap:9px}
+  .lvl input{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:3px;background:linear-gradient(90deg,var(--clr) var(--p,75%),var(--line) var(--p,75%));outline:none}
+  .lvl input::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--text);border:2px solid var(--clr);cursor:pointer;box-shadow:0 0 0 3px rgba(0,0,0,.3)}
+  .lvl input::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--text);border:2px solid var(--clr);cursor:pointer}
+  .lvl .db{font-family:var(--mono);font-size:10.5px;color:var(--muted);width:34px;text-align:right;flex-shrink:0}
+
+  .acts{display:flex;align-items:center;gap:6px;flex-shrink:0}
+  .sm{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);display:grid;place-items:center;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--muted);transition:.14s;background:rgba(0,0,0,.2)}
+  .sm:hover{color:var(--text);border-color:color-mix(in srgb,var(--green) 30%,var(--line))}
+  .sm.solo.on{background:var(--green);border-color:var(--green);color:#04140b;box-shadow:0 0 14px -3px var(--green)}
+  .sm.mute.on{background:var(--danger);border-color:var(--danger);color:#1a0606}
+  .sm.dl svg{width:15px;height:15px}
+  .sm.dl:hover{color:var(--green);border-color:var(--green-dim)}
+
+  .subwrap{display:grid;grid-template-rows:0fr;transition:grid-template-rows .26s ease}
+  .channel.open .subwrap{grid-template-rows:1fr}
+  .subwrap > div{overflow:hidden}
+  .sub{border-top:1px solid var(--line-soft);background:rgba(0,0,0,.18)}
+  .sub .channel{margin:0;border:none;border-radius:0;border-bottom:1px solid var(--line-soft);background:transparent}
+  .sub .channel:last-child{border-bottom:none}
+  .splitnote{font-size:10.5px;color:var(--muted-2);padding:7px 15px 8px 30px;display:flex;align-items:center;gap:7px}
+  .splitnote svg{width:13px;height:13px;color:var(--warn);flex-shrink:0}
+
+  /* ===== transport bar ===== */
+  .transport{
+    display:flex;align-items:center;gap:18px;padding:12px 22px;
+    border-top:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(10,16,12,.9),rgba(14,20,17,.96));
+    backdrop-filter:blur(8px);
+  }
+  .tcontrols{display:flex;align-items:center;gap:8px;flex-shrink:0}
+  .tbtn{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;color:var(--muted);border:1px solid var(--line);background:rgba(0,0,0,.25);transition:.14s}
+  .tbtn:hover{color:var(--text);border-color:color-mix(in srgb,var(--green) 30%,var(--line))}
+  .tbtn svg{width:16px;height:16px}
+  .play{width:44px;height:44px;background:var(--green);border-color:var(--green);color:#04140b;box-shadow:0 0 20px -5px var(--green)}
+  .play:hover{background:#46ee8c;color:#04140b}
+  .play svg{width:19px;height:19px}
+
+  .time{font-family:var(--mono);font-size:13px;color:var(--text);flex-shrink:0;letter-spacing:.5px}
+  .time b{color:var(--green)}.time span{color:var(--muted-2)}
+  .scrub{flex:1;height:6px;border-radius:4px;background:var(--line);position:relative;cursor:pointer;min-width:80px}
+  .scrub .buf{position:absolute;inset:0;width:100%;border-radius:4px;background:repeating-linear-gradient(90deg,rgba(var(--green-rgb),.08) 0 6px,transparent 6px 9px)}
+  .scrub .fill{position:absolute;left:0;top:0;bottom:0;width:21%;border-radius:4px;background:linear-gradient(90deg,var(--teal),var(--green))}
+  .scrub .knob{position:absolute;top:50%;left:21%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--green);box-shadow:0 0 0 4px rgba(var(--green-rgb),.18)}
+
+  .master{display:flex;align-items:center;gap:9px;flex-shrink:0}
+  .master svg{width:17px;height:17px;color:var(--muted)}
+  .master input{-webkit-appearance:none;appearance:none;width:84px;height:4px;border-radius:3px;background:linear-gradient(90deg,var(--green) 80%,#24302a 80%);outline:none}
+  .master input::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:#fff;border:2px solid var(--green);cursor:pointer}
+
+  .dlbar{display:flex;align-items:center;gap:10px;flex-shrink:0;padding-left:18px;border-left:1px solid var(--line)}
+  .selcount{font-size:12px;color:var(--muted)}
+  .selcount b{color:var(--green);font-family:var(--mono)}
+  .btn{display:flex;align-items:center;gap:8px;padding:9px 15px;border-radius:9px;font-size:12.5px;font-weight:560;transition:.15s;border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--text)}
+  .btn:hover{border-color:color-mix(in srgb,var(--green) 30%,var(--line))}
+  .btn svg{width:15px;height:15px}
+  .btn.primary{background:var(--green);border-color:var(--green);color:#04140b;box-shadow:0 0 18px -6px var(--green)}
+  .btn.primary:hover{background:#46ee8c}
+
+  /* ===== UPLOAD / DEPTH / PROCESSING (lighter) ===== */
+  .centered{flex:1;display:flex;align-items:center;justify-content:center;padding:34px}
+  .drop{
+    width:min(640px,100%);border:1.5px dashed #2c3d33;border-radius:20px;padding:54px 40px;text-align:center;
+    background:radial-gradient(600px 300px at 50% 0%,rgba(var(--green-rgb),.06),transparent 70%),linear-gradient(180deg,var(--panel-2),var(--panel));
+  }
+  .drop .ic{width:64px;height:64px;border-radius:16px;margin:0 auto 20px;display:grid;place-items:center;background:color-mix(in srgb,var(--green) 14%,transparent);border:1px solid var(--green-dim)}
+  .drop .ic svg{width:30px;height:30px;color:var(--green)}
+  .drop h2{margin:0 0 9px;font-size:21px;letter-spacing:-.3px}
+  .drop p{margin:0 0 22px;color:var(--muted);font-size:14px}
+  .drop .fmts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+  .drop .fmts span{font-family:var(--mono);font-size:10.5px;color:var(--muted-2);border:1px solid var(--line);padding:3px 8px;border-radius:6px}
+
+  .depth{width:min(900px,100%);padding:30px}
+  .depth h2{font-size:20px;margin:0 0 5px}
+  .depth .sub-t{color:var(--muted);font-size:13.5px;margin:0 0 22px}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .card{border:1px solid var(--line);border-radius:var(--radius);padding:18px;background:linear-gradient(180deg,var(--panel-2),var(--panel));transition:.16s;cursor:pointer}
+  .card:hover{border-color:color-mix(in srgb,var(--green) 30%,var(--line))}
+  .cards{align-items:start}
+  .card{display:flex;flex-direction:column;min-width:0}
+  .card.active{border-color:var(--green-dim);box-shadow:0 0 0 1px var(--green-dim),0 0 30px -14px var(--green)}
+  .card .cn{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+  .card .cn b{font-size:15px}
+  .card .cn .n{font-family:var(--mono);font-size:11px;color:var(--green);border:1px solid var(--green-dim);border-radius:6px;padding:2px 7px}
+  .card ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+  .card li{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px}
+  .card li svg{width:13px;height:13px;color:var(--green);flex-shrink:0}
+  .card .mdl{margin-top:13px;padding-top:11px;border-top:1px solid var(--line-soft);font-size:10.5px;color:var(--muted-2);font-family:var(--mono)}
+
+  .proc{width:min(680px,100%);padding:30px}
+  .proc h2{font-size:20px;margin:0 0 22px;display:flex;align-items:center;gap:11px}
+  .proc .spin{width:18px;height:18px;border:2px solid var(--green-deep);border-top-color:var(--green);border-radius:50%;animation:sp 1s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .pass{display:flex;align-items:center;gap:14px;padding:13px 16px;border:1px solid var(--line);border-radius:11px;margin-bottom:9px;background:var(--panel)}
+  .pass.done{border-color:var(--green-dim)}
+  .pass.run{border-color:var(--green-dim);box-shadow:0 0 24px -12px var(--green)}
+  .pass .pic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;border:1px solid var(--line)}
+  .pass.done .pic{background:var(--green-deep);border-color:var(--green-dim);color:var(--green)}
+  .pass.run .pic{color:var(--green)}
+  .pass .pic svg{width:15px;height:15px}
+  .pass .pt{flex:1}
+  .pass .pt .pn{font-size:13.5px;font-weight:550}
+  .pass .pt .pd{font-size:11px;color:var(--muted-2);font-family:var(--mono)}
+  .pass .pbar{width:120px;height:5px;border-radius:3px;background:#1a241e;overflow:hidden;flex-shrink:0;position:relative}
+  .pass .pbar i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--green));border-radius:3px;transition:width .3s}
+  .pass.run .pbar.indet i{position:absolute;width:40%!important;animation:indet 1.1s ease-in-out infinite}
+  @keyframes indet{0%{left:-40%}100%{left:100%}}
+  .pass .pst{font-family:var(--mono);font-size:11px;color:var(--muted);min-width:54px;text-align:right;flex-shrink:0}
+  .proc .pnote{font-size:11.5px;color:var(--muted-2);margin:2px 0 16px}
+
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+  /* ---- color schemes (item 8) ---- */
+  body.theme-blue{ --bg:#070c12;--bg-grad:#0a1018;--panel:#0e131b;--panel-2:#121a24;--panel-3:#16202c;
+    --line:#1e2a3a;--green:#3b9eff;--green-rgb:59,158,255;--green-dim:#1f5b9d;--green-deep:#0c2a4a;--teal:#5ec8ff;--aqua:#7ec8ff;--leaf:#86c5ff;--muted:#7b8a9a; }
+  body.theme-red{ --bg:#100808;--bg-grad:#160a0a;--panel:#150e0e;--panel-2:#1d1212;--panel-3:#251616;
+    --line:#3a1e1e;--green:#ff5a5a;--green-rgb:255,90,90;--green-dim:#9d3030;--green-deep:#4a0c0c;--teal:#ff8a6a;--aqua:#ff9a7a;--leaf:#ffa07a;--muted:#9a7b7b; }
+
+  /* ---- pitch / speed adjusters (items 4,5) ---- */
+  .adj{display:inline-flex;align-items:center;gap:4px;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:9px;padding:3px 5px;font-size:11px}
+  .adj>span{color:var(--muted);padding:0 4px;font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+  .adj button{width:22px;height:22px;border:none;background:var(--panel-3);color:var(--text);border-radius:6px;
+    cursor:pointer;font-size:14px;line-height:1;display:grid;place-items:center}
+  .adj button:hover{background:var(--green-deep);color:var(--green)}
+  .adj button.rst{font-size:11px;color:var(--muted)}
+  .adj b{min-width:34px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--green)}
+  .adj select{background:var(--panel-3);color:var(--text);border:none;border-radius:6px;font-size:11px;padding:3px 4px;cursor:pointer;font-family:var(--mono)}
+  .chordv{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--leaf);line-height:1}
+
+  /* ---- pan knob (item 2) ---- */
+  .pan{display:flex;flex-direction:column;align-items:center;gap:2px;width:54px;flex-shrink:0}
+  .pan input[type=range]{width:50px;height:3px;accent-color:var(--aqua);cursor:pointer}
+  .pan .panlab{font-size:9px;color:var(--muted-2)}
+
+  /* ---- recent sessions (item 1) ---- */
+  .recents{display:flex;flex-direction:column;gap:2px;margin-top:4px;max-height:230px;overflow-y:auto;overflow-x:hidden;padding-right:3px}
+  .clr-btn{font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted-2);
+    background:transparent;border:1px solid var(--line);border-radius:6px;padding:2px 8px;cursor:pointer;transition:.14s}
+  .clr-btn:hover{color:var(--danger);border-color:var(--danger)}
+  .clr-btn.hidden{display:none}
+  .recents::-webkit-scrollbar{width:7px}
+  .recents::-webkit-scrollbar-track{background:transparent}
+  .recents::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+  .recents::-webkit-scrollbar-thumb:hover{background:var(--green-dim)}
+  .recents{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+  .rec{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;cursor:pointer;border:1px solid transparent;text-align:left;width:100%}
+  .rec:hover{background:var(--panel-2);border-color:var(--line)}
+  .rec .rdot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;opacity:.8}
+  .rec .rtxt{min-width:0;flex:1;overflow:hidden}
+  .rec .rn{display:block;font-size:12px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rec .rm{display:block;font-size:10px;color:var(--muted-2);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rec-empty{font-size:11px;color:var(--muted-2);padding:6px 9px}
+  .overview{position:relative;height:34px;margin:0 2px 12px;border:1px solid var(--line);border-radius:9px;
+    background:var(--panel);overflow:hidden;cursor:pointer}
+  .overview canvas{position:absolute;inset:0;width:100%;height:100%}
+  .overview .ov-ph{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 6px var(--green);left:0;pointer-events:none;z-index:2}
+  .overview .ov-win{position:absolute;top:0;bottom:0;background:rgba(255,255,255,.07);border-left:1px solid var(--green-dim);border-right:1px solid var(--green-dim);pointer-events:none;z-index:1;display:none}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#04140b" stroke-width="2.2" stroke-linecap="round">
+          <path d="M4 12h2l2-6 3 15 3-12 2 6h4"/>
+        </svg>
+      </div>
+      <div>
+        <h1>stem<b>my</b></h1>
+        <div class="tag">separation studio</div>
+      </div>
+    </div>
+
+    <div class="proj">
+      <span class="dot"></span>
+      <div style="min-width:0">
+        <div class="name" id="projname">Midnight Run — rough mix.wav</div>
+        <div class="meta mono" id="projmeta">44.1 kHz · 24-bit · 03:18</div>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="topstat">
+      <div class="stat"><span class="k">Tempo</span><span class="v mono"><b id="stat-bpm">128.0</b> bpm</span></div>
+      <div class="stat"><span class="k">Stems</span><span class="v mono"><b id="stat-stems">13</b> tracks</span></div>
+      <button class="iconbtn" id="cog" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="body">
+    <!-- STEP RAIL -->
+    <nav class="rail">
+      <div class="lbl">Workflow</div>
+      <button class="step done" data-go="upload">
+        <span class="num">✓</span>
+        <span class="txt">Upload<small>Midnight Run.wav</small></span>
+      </button>
+      <button class="step done" data-go="depth">
+        <span class="num">✓</span>
+        <span class="txt">Depth<small>Deep · 13 stems</small></span>
+      </button>
+      <button class="step done" data-go="processing">
+        <span class="num">✓</span>
+        <span class="txt">Separate<small>5 passes · done</small></span>
+      </button>
+      <button class="step active" data-go="studio">
+        <span class="num">4</span>
+        <span class="txt">Studio<small>mix · play · export</small></span>
+      </button>
+
+      <div class="lbl" style="margin-top:18px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span>Recent sessions</span>
+        <button id="clearRecents" class="clr-btn" title="Delete all saved sessions from disk">Clear</button>
+      </div>
+      <div id="recents" class="recents"><div class="rec-empty">No saved sessions yet</div></div>
+
+      <div class="foot">
+        <b>Local backend</b><br>127.0.0.1 : 5002
+        <div class="gpu">
+          <span style="font-size:10px;width:24px">GPU</span>
+          <span class="bar"><i id="gpubar"></i></span>
+          <span class="mono" id="gputext" style="font-size:10px">— / — GB</span>
+        </div>
+        <div class="gpu" style="margin-top:3px">
+          <span style="font-size:10px;width:24px">CPU</span>
+          <span class="bar"><i id="cpubar"></i></span>
+          <span class="mono" id="cputext" style="font-size:10px">—%</span>
+        </div>
+        <div id="gpudev" style="margin-top:6px;font-size:10px">RTX 5060 · CUDA 12.8</div>
+      </div>
+    </nav>
+
+    <!-- STAGE -->
+    <div class="stage">
+
+      <!-- ===== STUDIO ===== -->
+      <section class="view show" id="v-studio">
+        <div class="studio-scroll">
+
+          <div class="studio-top">
+          <!-- tempo / key / controls strip -->
+          <div class="tempo">
+            <div class="block">
+              <span class="k">Tempo</span>
+              <span class="bpm">128.0 <small>bpm</small></span>
+            </div>
+            <div class="block">
+              <span class="k">Chord now</span>
+              <span class="chordv" id="chordnow">—</span>
+            </div>
+            <div class="spacer" style="flex:1"></div>
+            <div class="ctrls">
+              <div class="adj" title="Pitch shift (semitones)">
+                <span>Pitch</span>
+                <button data-pitch="-1">−</button><b id="pitchval">0</b><button data-pitch="1">+</button>
+                <button class="rst" data-pitch="reset" title="Reset pitch">⟲</button>
+              </div>
+              <div class="adj" title="Playback tempo (BPM)">
+                <span>Tempo</span>
+                <button data-tempo="-1">−</button><b id="tempoval">— bpm</b><button data-tempo="1">+</button>
+                <button class="rst" data-tempo="reset" title="Reset tempo">⟲</button>
+              </div>
+              <button class="pill" id="metro">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 21h12L14 4h-4L6 21z"/><path d="M9 14l6-4"/></svg>
+                Metronome
+              </button>
+              <div class="adj" id="metroadj" title="Shift the downbeat / change time signature">
+                <span>Beat 1</span>
+                <button data-db="-1" title="Shift downbeat earlier">◀</button>
+                <select id="meter" title="Beats per bar">
+                  <option value="3">3/4</option><option value="4" selected>4/4</option>
+                  <option value="5">5/4</option><option value="6">6/8</option><option value="7">7/8</option>
+                </select>
+                <select id="feel" title="Click feel — match the metronome to how fast the song feels">
+                  <option value="0.5">½× half-time</option>
+                  <option value="1" selected>1× normal</option>
+                  <option value="2">2× double-time</option>
+                </select>
+                <button data-db="1" title="Shift downbeat later">▶</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="overview" id="overview" title="Click to seek · scroll to zoom waveforms">
+            <canvas id="ovcanvas"></canvas>
+            <div class="ov-ph" id="ovph"></div>
+            <div class="ov-win" id="ovwin"></div>
+          </div>
+
+          <div class="chan-head">
+            <div class="t">Channels <span>· solo / mute / level / export per stem</span>
+              <span class="sortctl" id="sortctl" title="Sort channels">
+                <button data-sort="active" class="on">Active</button><button data-sort="az">A–Z</button>
+              </span>
+              <span class="hidectl" id="hidectl" title="Hide instruments with peak quieter than this (type or drag)">
+                <span class="hl">hide &lt;</span>
+                <input type="number" id="hideval" value="0.0018" min="0" max="0.05" step="0.0001">
+                <input type="range" id="hideslider" min="0" max="0.02" step="0.0001" value="0.0018">
+              </span>
+            </div>
+            <div class="legend">
+              <span class="zoomctl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="range" id="zoom" min="1" max="100" step="1" value="1" title="Zoom waveforms">
+                <b id="zoomval" class="mono">1×</b></span>
+              <i><b style="background:var(--green)"></b> isolated</i>
+              <i><b style="background:var(--warn)"></b> experimental split</i>
+            </div>
+          </div>
+          </div><!-- /studio-top -->
+
+          <div id="channels"></div>
+
+        </div>
+
+        <!-- TRANSPORT -->
+        <div class="transport">
+          <div class="tcontrols">
+            <button class="tbtn" title="To start"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5v14H4V5zm14 0v14l-11-7z"/></svg></button>
+            <button class="tbtn" title="Back 5s"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 5v14l-9-7zm11 0v14l-9-7z"/></svg></button>
+            <button class="play" id="play" title="Play / pause">
+              <svg id="playicon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <button class="tbtn" title="Forward 5s"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 5v14l9-7zM2 5v14l9-7z"/></svg></button>
+            <button class="tbtn" title="Loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></button>
+          </div>
+
+          <div class="time mono"><b id="tcur">00:42</b> <span>/ 03:18</span></div>
+
+          <div class="scrub" id="scrub">
+            <div class="buf"></div>
+            <div class="fill" id="scrubfill"></div>
+            <div class="knob" id="scrubknob"></div>
+          </div>
+
+          <div class="master">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            <input type="range" min="0" max="100" value="80" aria-label="Master volume">
+          </div>
+
+          <div class="dlbar">
+            <span class="selcount">selected <b id="selnum">3</b></span>
+            <button class="btn" id="dlsel">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>
+              Download selected
+            </button>
+            <button class="btn primary" id="dlall">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              Export all · zip
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== UPLOAD ===== -->
+      <section class="view" id="v-upload">
+        <div class="centered">
+          <div class="drop" id="dropzone">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/></svg></div>
+            <h2>Drop a track to pull apart</h2>
+            <p>Stemmy separates it locally on your GPU — nothing leaves this machine.</p>
+            <button class="btn primary" style="margin:0 auto" id="pickbtn">Choose audio file</button>
+            <input type="file" id="fileinput" accept=".wav,.mp3,.flac,.m4a,.ogg,.aiff,.aif" style="display:none">
+            <div class="fmts"><span>WAV</span><span>MP3</span><span>FLAC</span><span>M4A</span><span>OGG</span><span>AIFF</span></div>
+            <div id="uploadmsg" style="margin-top:14px;font-size:13px;color:var(--muted)"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== DEPTH ===== -->
+      <section class="view" id="v-depth">
+        <div class="centered" style="align-items:flex-start;padding-top:30px">
+          <div class="depth">
+            <h2>How deep should it cut?</h2>
+            <p class="sub-t">Each level adds more separation passes. Deeper splits cost more GPU time and VRAM.</p>
+            <div class="cards">
+              <div class="card" data-depth="quick">
+                <div class="cn"><b>Quick</b><span class="n">4 stems</span></div>
+                <ul>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Vocals</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Bass</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Drums</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Other</li>
+                </ul>
+                <div class="mdl">mel-band roformer · ~1 pass</div>
+              </div>
+              <div class="card" data-depth="standard">
+                <div class="cn"><b>Standard</b><span class="n">6 stems</span></div>
+                <ul>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Vocals · Bass · Drums</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Guitar</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Piano</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Other</li>
+                </ul>
+                <div class="mdl">+ htdemucs_6s · ~2 passes</div>
+              </div>
+              <div class="card active" data-depth="deep">
+                <div class="cn"><b>Deep</b><span class="n">up to 12</span></div>
+                <ul>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Vocals · Bass · Guitar · Piano · Other</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Drums → kick · snare · toms · hat · ride · crash</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Synth · organ · strings <span style="opacity:.6">(grouped in Other)</span></li>
+                </ul>
+                <div class="mdl">htdemucs_6s + MDX23C DrumSep · auto-downloaded</div>
+              </div>
+
+              <div class="card" data-depth="extended" id="card-extended">
+                <div class="cn"><b>Extended</b><span class="n">many</span></div>
+                <ul>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Synth · organ · strings · brass · winds</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Piano · guitars · keys · kick · snare · toms · hh</li>
+                  <li style="opacity:.6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Full-length · RAM-heavy: needs ~12–16 GB free (32 GB+ recommended)</li>
+                  <li id="ext-note" style="opacity:.6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Needs MSST — see README &amp; search "ZFTurbo MSST install"</li>
+                </ul>
+                <div class="mdl">ZFTurbo MSST · 53-stem bs_roformer · run get_msst.bat</div>
+              </div>
+            </div>
+            <div style="margin-top:26px;display:flex;justify-content:center">
+              <button class="btn primary" id="startsep" style="font-size:15px;padding:12px 28px">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M5 3l14 9-14 9z"/></svg>
+                Start separation
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== PROCESSING ===== -->
+      <section class="view" id="v-processing">
+        <div class="centered" style="align-items:flex-start;padding-top:30px">
+          <div class="proc">
+            <h2><span class="spin"></span> Separating…</h2>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// Flask injects the real project here; stays null when the file is opened standalone.
+window.__PROJECT__ = window.__PROJECT__ || null; /*__PROJECT_INJECT__*/
+const ICONS = {
+  vocal:'<path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M8 22h8"/>',
+  bass:'<circle cx="7" cy="16" r="4.2"/><path d="M10 13.2 19 4.2"/><path d="m17.2 2.4 4.4 4.4-2 2-4.4-4.4z"/><path d="M8.4 13.6 5 17"/>',
+  click:'<path d="M6 21h12L14 4h-4L6 21z"/><path d="M9 14l6-4"/><path d="M4 21h16"/>',
+  drums:'<ellipse cx="12" cy="9" rx="8" ry="3"/><path d="M4 9v6c0 1.7 3.6 3 8 3s8-1.3 8-3V9"/><path d="m7 12-3 9M17 12l3 9"/>',
+  kick:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>',
+  snare:'<ellipse cx="12" cy="8" rx="9" ry="3"/><path d="M3 8v5c0 1.7 4 3 9 3s9-1.3 9-3V8"/><path d="M3 13 1 21M21 13l2 8"/>',
+  hihat:'<ellipse cx="12" cy="8" rx="9" ry="2"/><ellipse cx="12" cy="11" rx="9" ry="2"/><path d="M12 13v8"/>',
+  toms:'<ellipse cx="8" cy="8" rx="5" ry="2"/><path d="M3 8v4c0 1 2.2 2 5 2s5-1 5-2V8"/><ellipse cx="17" cy="11" rx="4" ry="1.6"/><path d="M13 11v3c0 .9 1.8 1.6 4 1.6s4-.7 4-1.6v-3"/>',
+  cymbals:'<path d="M2 12h20"/><path d="M12 12 4 6M12 12l8-6M12 12v9"/>',
+  guitar:'<path d="m18 2 4 4-2 2-1-1-3 3a5 5 0 1 1-2-2l3-3-1-1z"/><circle cx="9" cy="15" r="4"/>',
+  piano:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v9M15 4v9M3 13h18"/>',
+  synth:'<rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 7v6M10 7v6M14 7v6M18 7v6"/>',
+  organ:'<path d="M4 21V8l4-2v15M10 21V5l4-1v17M16 21V6l4 1v14"/>',
+  strings:'<path d="M12 2c-3 0-5 4-5 9s2 11 5 11 5-6 5-11-2-9-5-9z"/><path d="M10 4v18M14 4v18"/>',
+  keys:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v9M15 4v9M3 13h18"/>',
+};
+function icon(t){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+(ICONS[t]||ICONS.keys)+'</svg>';}
+
+const MOCK_STEMS = [
+  {id:'vocals', name:'Vocals', clr:'#36e27e', type:'vocal', sz:'31.4 MB', db:'-2.0', lvl:88, sel:true},
+  {id:'bass',   name:'Bass',   clr:'#b6f04a', type:'bass',  sz:'28.9 MB', db:'-4.5', lvl:74},
+  {id:'drums',  name:'Drums',  clr:'#2dd4bf', type:'drums', sz:'33.1 MB', db:'-1.5', lvl:82, sel:true, open:true, children:[
+     {id:'kick',    name:'Kick',    type:'kick',    sz:'9.2 MB', db:'-3.0', lvl:80},
+     {id:'snare',   name:'Snare',   type:'snare',   sz:'8.7 MB', db:'-3.8', lvl:76, sel:true},
+     {id:'hihat',   name:'Hi-Hat',  type:'hihat',   sz:'6.1 MB', db:'-6.0', lvl:64},
+     {id:'toms',    name:'Toms',    type:'toms',    sz:'5.4 MB', db:'-7.2', lvl:58},
+     {id:'cymbals', name:'Cymbals · ride + crash', type:'cymbals', sz:'7.0 MB', db:'-5.4', lvl:62},
+  ]},
+  {id:'guitar', name:'Guitar', clr:'#7ee787', type:'guitar', sz:'26.7 MB', db:'-3.3', lvl:70, split:true, children:[
+     {id:'gtr1', name:'Guitar 1 · clean',  type:'guitar', sz:'13.8 MB', db:'-4.0', lvl:68, beta:true},
+     {id:'gtr2', name:'Guitar 2 · driven', type:'guitar', sz:'14.2 MB', db:'-3.6', lvl:66, beta:true},
+  ]},
+  {id:'keys', name:'Keys & Synth', clr:'#5eead4', type:'keys', sz:'24.0 MB', db:'-5.0', lvl:65, children:[
+     {id:'piano',   name:'Piano',   type:'piano',   sz:'10.1 MB', db:'-5.5', lvl:62},
+     {id:'synth',   name:'Synth',   type:'synth',   sz:'8.4 MB',  db:'-6.1', lvl:58},
+     {id:'organ',   name:'Organ',   type:'organ',   sz:'4.0 MB',  db:'-8.0', lvl:50},
+     {id:'strings', name:'Strings', type:'strings', sz:'5.2 MB',  db:'-7.3', lvl:54},
+  ]},
+];
+
+// ---- data source: real project (served by Flask) or mock (standalone/design) ----
+function fmtSize(b){ if(!b) return ''; const m=b/1048576; return (m>=1? m.toFixed(1)+' MB' : (b/1024).toFixed(0)+' KB'); }
+// stems can arrive with no colour (e.g. htdemucs piano). Never let a bad colour
+// reach the canvas — an invalid addColorStop value throws and halts the page.
+const PALETTE=['#36e27e','#2dd4bf','#5eead4','#7ee787','#b6f04a','#34d399','#6ee7b7','#a7f3d0'];
+const TYPE_CLR={vocal:'#36e27e',bass:'#b6f04a',drums:'#2dd4bf',guitar:'#7ee787',
+  keys:'#5eead4',piano:'#9b8cff',synth:'#5eead4',organ:'#5eead4',strings:'#5eead4',other:'#5eead4'};
+function isColor(c){ return typeof c==='string' && (c=c.trim()) && c!=='null' && c!=='undefined'; }
+function safeColor(c, seedKey){
+  if(isColor(c)) return c.trim();
+  if(seedKey && TYPE_CLR[seedKey]) return TYPE_CLR[seedKey];
+  const h = seedKey ? hashStr(String(seedKey)) : 0;
+  return PALETTE[h % PALETTE.length];
+}
+function buildTree(flat){
+  const byId={}, roots=[];
+  flat.forEach(s=>{ byId[s.id]={...s, clr: safeColor(s.clr, s.type||s.id),
+      sz: s.size?fmtSize(s.size):(s.sz||''),
+      db: s.db||'0.0', lvl: (s.lvl!=null?s.lvl:80), children:[]}; });
+  flat.forEach(s=>{ const n=byId[s.id];
+    if(s.parent&&byId[s.parent]) byId[s.parent].children.push(n); else roots.push(n); });
+  roots.forEach(r=>{ if(r.children.length){ r.open = (r.id==='drums');
+      r.split = r.children.some(c=>c.beta); } });
+  return roots;
+}
+const PROJECT = window.__PROJECT__;
+const REAL = !!(PROJECT && PROJECT.stems && PROJECT.stems.length);
+const DESIGN = (location.protocol === 'file:');   // opened as a file = design preview
+const STEMS = REAL ? buildTree(PROJECT.stems) : (DESIGN ? MOCK_STEMS : []);
+
+// flat list of leaf stems (the ones that actually have audio)
+function leaves(nodes,out){ nodes.forEach(n=>{ if(n.children&&n.children.length) leaves(n.children,out); else out.push(n); }); return out; }
+
+// ---- deterministic per-stem waveform ----
+function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function profile(type){
+  // returns {spike, floor, env} shaping per instrument family
+  switch(type){
+    case 'vocal':   return {spike:.35,floor:.18,seg:0.55};
+    case 'bass':    return {spike:.15,floor:.42,seg:0.30};
+    case 'drums':   return {spike:.92,floor:.06,seg:0.95};
+    case 'kick':    return {spike:.85,floor:.04,seg:0.5};
+    case 'snare':   return {spike:.9,floor:.05,seg:0.5};
+    case 'hihat':   return {spike:.7,floor:.10,seg:0.98};
+    case 'toms':    return {spike:.8,floor:.05,seg:0.4};
+    case 'cymbals': return {spike:.55,floor:.14,seg:0.9};
+    case 'guitar':  return {spike:.45,floor:.20,seg:0.6};
+    case 'piano':   return {spike:.4,floor:.16,seg:0.5};
+    case 'synth':   return {spike:.25,floor:.30,seg:0.4};
+    case 'organ':   return {spike:.12,floor:.40,seg:0.25};
+    case 'strings': return {spike:.18,floor:.34,seg:0.3};
+    case 'click':   return {spike:.95,floor:.02,seg:0.3};
+    default:        return {spike:.4,floor:.2,seg:0.5};
+  }
+}
+// Real peak data per stem id, filled once buffers decode. Falls back to the
+// deterministic shape only in design mode / before audio is ready.
+const PEAKS={};
+function computePeaks(buffer, buckets){
+  const data=buffer.getChannelData(0), n=data.length;
+  const out=new Float32Array(buckets), step=n/buckets;
+  for(let i=0;i<buckets;i++){
+    let mx=0; const s=(i*step)|0, e=Math.min(n,((i+1)*step)|0);
+    for(let j=s;j<e;j++){ const v=data[j]<0?-data[j]:data[j]; if(v>mx)mx=v; }
+    out[i]=mx;
+  }
+  return out;
+}
+// zoom state (1 = whole song). viewStart/viewLen define the visible window.
+let zoom=1, viewStart=0;
+function viewLen(){ return zoom>1 ? dur/zoom : dur; }
+function drawWave(canvas, color, type, seedKey){
+  color = safeColor(color, type);
+  const dpr=window.devicePixelRatio||1;
+  const w=canvas.clientWidth, h=canvas.clientHeight;
+  if(w===0) return;
+  canvas.width=w*dpr; canvas.height=h*dpr;
+  const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,w,h);
+  const bw=1.0, gap=0.7, n=Math.floor(w/(bw+gap)), mid=h/2;
+  const id=seedKey.split('_')[0];
+  const pk=PEAKS[id];
+  if(pk && dur>0){
+    // REAL waveform: sample the peak array over the visible time window
+    const vs=zoom>1?viewStart:0, vl=viewLen();
+    for(let i=0;i<n;i++){
+      const tA=vs+(i/n)*vl, tB=vs+((i+1)/n)*vl;
+      let iA=Math.floor(tA/dur*pk.length), iB=Math.max(iA+1,Math.floor(tB/dur*pk.length));
+      let mx=0; for(let k=iA;k<iB&&k<pk.length;k++){ if(pk[k]>mx)mx=pk[k]; }
+      const amp=Math.max(1.0, Math.pow(mx,0.8)*(h*0.46));   // mild curve for visibility
+      const x=i*(bw+gap)+1;
+      const grad=ctx.createLinearGradient(0,mid-amp,0,mid+amp);
+      grad.addColorStop(0,color); grad.addColorStop(.5,color+'cc'); grad.addColorStop(1,color+'55');
+      ctx.fillStyle=grad; ctx.fillRect(x,mid-amp,bw,amp*2);
+    }
+    return;
+  }
+  // FALLBACK: deterministic shape (design preview / before decode)
+  const rnd=mulberry(hashStr(seedKey)); const p=profile(type);
+  let env=p.floor;
+  for(let i=0;i<n;i++){
+    if(rnd()<p.seg*0.5){ env=p.floor + rnd()*(1-p.floor); }
+    env += (p.floor - env)*0.04;
+    let a=env; if(rnd()<p.spike*0.25){ a=Math.min(1,a+rnd()*0.6); }
+    a*= 0.4+0.6*Math.sin((i/n)*Math.PI);
+    const amp=Math.max(1.2, a*(h*0.46)), x=i*(bw+gap)+1;
+    const grad=ctx.createLinearGradient(0,mid-amp,0,mid+amp);
+    grad.addColorStop(0,color); grad.addColorStop(.5,color+'cc'); grad.addColorStop(1,color+'55');
+    ctx.fillStyle=grad; ctx.fillRect(x,mid-amp,bw,amp*2);
+  }
+}
+
+// ---- render channels ----
+const wrap=document.getElementById('channels');
+const canvases=[]; // {canvas,color,type,key}
+function checkSvg(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>';}
+function dlSvg(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v11"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>';}
+
+function channelRow(s, isSub, parentClr){
+  const clr=isSub?parentClr:s.clr;
+  const hasKids=s.children&&s.children.length;
+  const key=s.id+'_'+s.type;
+  const beta = s.beta? '<span class="beta">beta</span>':'';
+  const selOn = s.sel?'on':'';
+  const chev = hasKids
+      ? '<button class="chev" data-toggle="'+s.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 6 6 6-6 6"/></svg></button>'
+      : '<span class="chev spacer-chev"></span>';
+  return `
+    <div class="row" style="--clr:${clr}">
+      <button class="sel ${selOn}" data-sel="${s.id}">${checkSvg()}</button>
+      ${chev}
+      <div class="grip">
+        <div class="swatch"><span>${icon(s.type)}</span></div>
+        <div class="nm">
+          <div class="n">${s.name} ${beta}</div>
+          <div class="sz">${s.sz}</div>
+        </div>
+      </div>
+      <div class="wave"><canvas data-wave="${key}"></canvas><div class="playhead"></div></div>
+      <div class="pan" title="Pan L / R">
+        <input type="range" min="-100" max="100" value="0" data-pan="${s.id}">
+        <span class="panlab mono" data-panlab="${s.id}">C</span>
+      </div>
+      <div class="lvl">
+        <input type="range" min="0" max="100" value="${s.lvl}" style="--p:${s.lvl}%" data-lvl="${s.id}">
+        <span class="db mono">${s.db}</span>
+      </div>
+      <div class="acts">
+        <button class="sm solo" data-solo="${s.id}">S</button>
+        <button class="sm mute" data-mute="${s.id}">M</button>
+        <button class="sm dl" data-dl="${s.id}" title="Download stem">${dlSvg()}</button>
+      </div>
+    </div>`;
+}
+
+STEMS.forEach(s=>{
+  const hasKids=s.children&&s.children.length;
+  const div=document.createElement('div');
+  div.className='channel'+(hasKids?' group':'')+(s.open?' open':'');
+  div.style.setProperty('--clr',s.clr);
+  div.dataset.id=s.id;
+  let html=channelRow(s,false);
+  if(hasKids){
+    let kids='';
+    if(s.split){
+      kids+=`<div class="splitnote"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Same-instrument splits are best-effort — quality varies by mix.</div>`;
+    }
+    s.children.forEach(c=>{ kids+='<div class="channel" style="--clr:'+s.clr+'">'+channelRow(c,true,s.clr)+'</div>'; });
+    html+='<div class="subwrap"><div><div class="sub">'+kids+'</div></div></div>';
+  }
+  div.innerHTML=html;
+  wrap.appendChild(div);
+});
+
+// parent group id -> [child ids], so a group's pan/level fans out to its kids
+const KIDS={};
+(function buildKids(nodes){ nodes.forEach(s=>{ if(s.children&&s.children.length){ KIDS[s.id]=s.children.map(c=>c.id); buildKids(s.children); } }); })(STEMS);
+
+// collect canvases & draw
+document.querySelectorAll('canvas[data-wave]').forEach(c=>{
+  const key=c.dataset.wave; const parts=key.split('_'); const type=parts.slice(1).join('_');
+  // find color from closest .row (guard against a "null"/"undefined" custom prop)
+  const row=c.closest('.row'); const raw=getComputedStyle(row).getPropertyValue('--clr');
+  canvases.push({canvas:c,color:safeColor(raw,type),type:type,key:key});
+});
+function redraw(){ canvases.forEach(o=>{ try{ drawWave(o.canvas,o.color,o.type,o.key); }catch(e){ console.warn('wave draw skipped',o.key,e); } }); drawOverview(); }
+function drawOverview(){
+  const cv=document.getElementById('ovcanvas'); if(!cv) return;
+  const dpr=window.devicePixelRatio||1, w=cv.clientWidth, h=cv.clientHeight; if(!w) return;
+  cv.width=w*dpr; cv.height=h*dpr; const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr); ctx.clearRect(0,0,w,h);
+  const ids=Object.keys(PEAKS).filter(id=>id!=='metronome'); if(!ids.length) return;
+  let L=0; ids.forEach(id=>{ if(PEAKS[id].length>L)L=PEAKS[id].length; }); if(!L) return;
+  const mid=h/2, col=(getComputedStyle(document.body).getPropertyValue('--green-dim')||'#1f7d49').trim();
+  ctx.fillStyle=col||'#1f7d49';
+  const bars=Math.min(Math.floor(w),900), step=L/bars;
+  for(let i=0;i<bars;i++){
+    let mx=0; const s=Math.floor(i*step), e=Math.floor((i+1)*step);
+    for(const id of ids){ const pk=PEAKS[id]; for(let k=s;k<e&&k<pk.length;k++) if(pk[k]>mx)mx=pk[k]; }
+    const amp=Math.min(h*0.46, Math.pow(Math.min(1,mx),0.8)*h*0.46+0.4);
+    ctx.fillRect(i/bars*w, mid-amp, Math.max(1,w/bars-0.4), amp*2);
+  }
+}
+redraw();
+window.addEventListener('resize',()=>{clearTimeout(window._rt);window._rt=setTimeout(redraw,120);});
+
+// ---- interactions ----
+const soloed=new Set(), muted=new Set();
+function applyStates(){
+  const anySolo=soloed.size>0;
+  document.querySelectorAll('[data-solo]').forEach(b=>{b.classList.toggle('on',soloed.has(b.dataset.solo));});
+  document.querySelectorAll('[data-mute]').forEach(b=>{b.classList.toggle('on',muted.has(b.dataset.mute));});
+  document.querySelectorAll('.channel[data-id]').forEach(ch=>{
+    const id=ch.dataset.id;
+    const isSolo=soloed.has(id), isMute=muted.has(id);
+    ch.classList.toggle('dim', isMute || (anySolo && !isSolo));
+    ch.classList.toggle('soloed',isSolo);
+  });
+  const mb=document.getElementById('metro'); if(mb) mb.classList.toggle('on', !muted.has('metronome'));
+  recomputeGains();
+}
+wrap.addEventListener('click',e=>{
+  const solo=e.target.closest('[data-solo]');
+  const mute=e.target.closest('[data-mute]');
+  const sel=e.target.closest('[data-sel]');
+  const tog=e.target.closest('[data-toggle]');
+  if(solo){const id=solo.dataset.solo;soloed.has(id)?soloed.delete(id):soloed.add(id);applyStates();}
+  if(mute){const id=mute.dataset.mute;muted.has(id)?muted.delete(id):muted.add(id);applyStates();}
+  if(sel){sel.classList.toggle('on');updateSel();}
+  if(tog){const ch=document.querySelector('.channel[data-id="'+tog.dataset.toggle+'"]');ch.classList.toggle('open');setTimeout(redraw,280);}
+});
+function setPan(id,v){
+  if(AUDIO && AUDIO.map[id] && AUDIO.map[id].pan) AUDIO.map[id].pan.pan.value=v/100;
+  const lab=document.querySelector('[data-panlab="'+id+'"]');
+  if(lab) lab.textContent = v===0?'C':(v<0?'L'+Math.abs(v):'R'+v);
+  const sl=document.querySelector('[data-pan="'+id+'"]'); if(sl && +sl.value!==v) sl.value=v;
+}
+function setLvl(id,val){
+  const sl=document.querySelector('[data-lvl="'+id+'"]');
+  if(sl){ sl.value=val; sl.style.setProperty('--p',val+'%'); }
+}
+wrap.addEventListener('input',e=>{
+  const lvl=e.target.closest('[data-lvl]');
+  if(lvl){
+    lvl.style.setProperty('--p',lvl.value+'%');
+    const id=lvl.dataset.lvl;
+    if(KIDS[id]) KIDS[id].forEach(cid=>setLvl(cid,lvl.value));   // group -> children
+    recomputeGains();
+  }
+  const pan=e.target.closest('[data-pan]');
+  if(pan){
+    const id=pan.dataset.pan, v=+pan.value;
+    setPan(id,v);
+    if(KIDS[id]) KIDS[id].forEach(cid=>setPan(cid,v));           // group -> children
+  }
+});
+function updateSel(){document.getElementById('selnum').textContent=document.querySelectorAll('.sel.on').length;}
+updateSel();
+
+// ---- transport state ----
+let playing=false, t=0, dur=198, raf;
+const playIcon=document.getElementById('playicon');
+const tcur=document.getElementById('tcur');
+const fill=document.getElementById('scrubfill'), knob=document.getElementById('scrubknob');
+const mvol=document.querySelector('.master input');
+function fmt(s){s=Math.max(0,s|0);return String(s/60|0).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+function place(){const full=dur?(Math.min(t,dur)/dur*100):0;
+  if(fill)fill.style.width=full+'%'; if(knob)knob.style.left=full+'%'; if(tcur)tcur.textContent=fmt(t);
+  const ovph=document.getElementById('ovph'); if(ovph) ovph.style.left=full+'%';
+  const ovwin=document.getElementById('ovwin');
+  if(ovwin){ if(zoom>1){ ovwin.style.display='block'; ovwin.style.left=(viewStart/dur*100)+'%'; ovwin.style.width=(viewLen()/dur*100)+'%'; } else ovwin.style.display='none'; }
+  const vs=zoom>1?viewStart:0, vl=viewLen();
+  const win=vl?((t-vs)/vl*100):0;
+  document.querySelectorAll('.playhead').forEach(p=>p.style.left=Math.max(0,Math.min(100,win))+'%');}
+function setZoom(z){ zoom=Math.max(1,Math.min(100,z)); const vl=viewLen();
+  viewStart=Math.max(0,Math.min(Math.max(0,dur-vl), t-vl/2)); redraw(); place(); }
+
+// ====================================================================
+//  AUDIO ENGINE — sample-locked buffer playback (no media-element drift)
+//  All stems decode to AudioBuffers and start from ONE shared clock, so
+//  summing them reconstructs the mix cleanly. A limiter on the master bus
+//  stops the sum from clipping. Metronome is scheduled on the same clock.
+// ====================================================================
+let AUDIO=null;
+async function setupAudio(){
+  const leafNodes=leaves(STEMS,[]).filter(n=>n.url);
+  if(!leafNodes.length) return null;
+  const Ctx=window.AudioContext||window.webkitAudioContext;
+  const ctx=new Ctx();
+  const master=ctx.createGain(); master.gain.value=(mvol? +mvol.value/100 : 0.9);
+  // brickwall-ish limiter: summing 6 stems can peak above 0 dBFS -> clip/distort.
+  const limiter=ctx.createDynamicsCompressor();
+  limiter.threshold.value=-1.0; limiter.knee.value=0; limiter.ratio.value=20;
+  limiter.attack.value=0.003; limiter.release.value=0.25;
+  master.connect(limiter); limiter.connect(ctx.destination);
+  const map={};
+  leafNodes.forEach(n=>{ const g=ctx.createGain();
+    let pan=null;
+    try{ pan=ctx.createStereoPanner(); g.connect(pan); pan.connect(master); }
+    catch(_){ g.connect(master); }   // very old browsers: no panner
+    map[n.id]={gain:g,pan:pan,leaf:n,buffer:null,orig:null,src:null}; });
+  const A={ctx,master,limiter,map,startTime:0,offset:0,playing:false,ready:false};
+  // decode every stem (parallel). Buffers, not <audio>, so they stay phase-locked.
+  await Promise.all(leafNodes.map(async n=>{
+    try{
+      const r=await fetch(n.url); const arr=await r.arrayBuffer();
+      const buf=await ctx.decodeAudioData(arr);
+      map[n.id].buffer=buf; map[n.id].orig=buf; PEAKS[n.id]=computePeaks(buf,40000);
+    }catch(e){ console.warn('decode failed',n.id,e); }
+  }));
+  // Group stems (e.g. Drums) have no audio of their own — their lane was drawing
+  // a synthetic shape that ignored zoom. Build their peaks from the max envelope
+  // of their children so the parent waveform follows zoom/scrub like every lane.
+  function aggregateParentPeaks(nodes){
+    nodes.forEach(s=>{
+      if(s.children && s.children.length){
+        aggregateParentPeaks(s.children);
+        const kid=s.children.map(c=>PEAKS[c.id]).filter(Boolean);
+        if(kid.length){
+          let L=0; kid.forEach(p=>{ if(p.length>L)L=p.length; });
+          const agg=new Float32Array(L);
+          kid.forEach(p=>{ for(let i=0;i<p.length;i++){ if(p[i]>agg[i]) agg[i]=p[i]; } });
+          PEAKS[s.id]=agg;
+        }
+      }
+    });
+  }
+  aggregateParentPeaks(STEMS);
+  // real duration = longest stem
+  let mx=0; Object.values(map).forEach(o=>{ if(o.buffer&&o.buffer.duration>mx)mx=o.buffer.duration; });
+  if(mx) dur=mx;
+  A.ready=true; place();
+  redraw();   // repaint channels with REAL waveform data now that buffers exist
+  return A;
+}
+function audioStart(offset){
+  const A=AUDIO; if(!A||!A.ready) return;
+  if(A.ctx.state==='suspended') A.ctx.resume();
+  A.startTime=A.ctx.currentTime-offset; A.offset=offset;
+  Object.values(A.map).forEach(o=>{
+    if(!o.buffer) return;
+    const s=A.ctx.createBufferSource(); s.buffer=o.buffer; s.connect(o.gain);
+    try{ s.start(0, Math.max(0,Math.min(offset,o.buffer.duration-0.01))); }catch(_){ try{s.start();}catch(__){} }
+    o.src=s;
+  });
+  A.playing=true;
+}
+function audioStop(){
+  const A=AUDIO; if(!A) return;
+  A.offset=audioTime();
+  Object.values(A.map).forEach(o=>{ if(o.src){ try{o.src.stop();}catch(_){}; o.src=null; } });
+  A.playing=false;
+}
+function audioTime(){ const A=AUDIO; if(!A) return t; return A.playing? (A.ctx.currentTime-A.startTime) : A.offset; }
+
+function recomputeGains(){
+  if(!AUDIO) return;
+  const anySolo=soloed.size>0;
+  Object.entries(AUDIO.map).forEach(([id,o])=>{
+    const slider=document.querySelector('[data-lvl="'+id+'"]');
+    const lvl=slider? (+slider.value/100) : 0.9;
+    const p=o.leaf.parent;
+    const selfSolo=soloed.has(id)||(p&&soloed.has(p));
+    const selfMute=muted.has(id)||(p&&muted.has(p));
+    const on=!selfMute && (!anySolo || selfSolo);
+    o.gain.gain.value = on? lvl : 0.0;
+  });
+}
+function rafLoop(){
+  if(AUDIO&&AUDIO.ready&&AUDIO.playing){ t=audioTime(); if(t>=dur){ togglePlay(false); t=dur; } }
+  else if(!AUDIO){ t+=1/60; if(t>=dur)t=0; }
+  if(zoom>1){ const vl=viewLen(); if(t<viewStart || t>viewStart+vl*0.98){ viewStart=Math.max(0,Math.min(Math.max(0,dur-vl), t-vl*0.1)); redraw(); } }
+  const ch=document.getElementById('chordnow'); if(ch){ const c=currentChord(); if(ch.textContent!==c) ch.textContent=c; }
+  place(); raf=requestAnimationFrame(rafLoop);
+}
+function togglePlay(force){
+  const next = (typeof force==='boolean')? force : !playing;
+  if(next===playing && typeof force==='boolean') {}
+  playing=next;
+  playIcon.innerHTML= playing?'<rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/>':'<path d="M8 5v14l11-7z"/>';
+  if(AUDIO&&AUDIO.ready){ playing? audioStart(t) : audioStop(); }
+  if(playing){ cancelAnimationFrame(raf); rafLoop(); } else cancelAnimationFrame(raf);
+}
+function seek(x){
+  t=Math.max(0,Math.min(dur,x||0));
+  if(AUDIO&&AUDIO.ready){ if(AUDIO.playing){ audioStop(); audioStart(t); } else { AUDIO.offset=t; } }
+  place();
+}
+document.getElementById('play').addEventListener('click',()=>togglePlay());
+document.getElementById('scrub').addEventListener('click',e=>{ const r=e.currentTarget.getBoundingClientRect(); seek((e.clientX-r.left)/r.width*dur); });
+if(mvol) mvol.addEventListener('input',()=>{ if(AUDIO)AUDIO.master.gain.value=+mvol.value/100; });
+
+// ---- metronome stem: the click track is now a real stem (baked from the detected
+//      beats, so it's sample-locked with everything). The Metronome button just
+//      mutes/unmutes that stem; its own S/M/level work like any channel. ----
+const metroBtn=document.getElementById('metro');
+function metroPresent(){ return leaves(STEMS,[]).some(n=>n.id==='metronome'); }
+if(metroBtn){
+  if(!metroPresent()){ metroBtn.style.display='none'; const ma=document.getElementById('metroadj'); if(ma) ma.style.display='none'; }
+  else muted.add('metronome');                          // tempo stem starts silent
+  metroBtn.addEventListener('click',()=>{
+    if(muted.has('metronome')) muted.delete('metronome'); else muted.add('metronome');
+    applyStates();
+  });
+}
+applyStates();
+
+// ---- metronome: generated client-side from the detected beats so the downbeat
+//      can be shifted and the time signature changed without re-separating (item 5).
+let METER=4, DBOFFSET=0, FEEL=1;
+const BEATS = (PROJECT&&PROJECT.analysis&&PROJECT.analysis.beats) || [];
+// Re-grid the detected beats to a chosen feel: 2x inserts the off-beats
+// (double-time), 0.5x keeps every other beat (half-time), 1x is as-detected.
+function feelBeats(beats, feel){
+  if(!beats.length) return beats;
+  if(feel===2){
+    const out=[];
+    for(let i=0;i<beats.length;i++){
+      out.push(beats[i]);
+      const nx = beats[i+1]!=null ? beats[i+1]
+               : beats[i] + (i>0 ? beats[i]-beats[i-1] : 0.5);
+      out.push((beats[i]+nx)/2);
+    }
+    return out;
+  }
+  if(feel===0.5) return beats.filter((_,i)=>i%2===0);
+  return beats.slice();
+}
+function genClickBuffer(ctx, beats, totalDur, meter, offset, scale){
+  const sr=ctx.sampleRate, n=Math.max(1,Math.ceil(totalDur*sr));
+  const buf=ctx.createBuffer(1,n,sr), d=buf.getChannelData(0), len=Math.floor(0.05*sr);
+  beats.forEach((bt,i)=>{
+    const accent=((((i-offset)%meter)+meter)%meter)===0;
+    const start=Math.floor(bt*scale*sr), freq=accent?1600:1100, amp=accent?0.78:0.4;
+    for(let k=0;k<len;k++){ const idx=start+k; if(idx>=0&&idx<n){ const env=Math.exp(-k/(0.012*sr)); d[idx]+=amp*env*Math.sin(2*Math.PI*freq*k/sr); } }
+  });
+  return buf;
+}
+function restartStem(id){
+  const A=AUDIO; if(!A||!A.playing) return; const o=A.map[id]; if(!o||!o.buffer) return;
+  if(o.src){ try{o.src.stop();}catch(_){}; }
+  const s=A.ctx.createBufferSource(); s.buffer=o.buffer; s.connect(o.gain);
+  const pos=audioTime(); try{ s.start(0, Math.max(0,Math.min(pos,o.buffer.duration-0.01))); }catch(_){ try{s.start();}catch(__){} }
+  o.src=s;
+}
+function regenMetro(){
+  const A=AUDIO; if(!A||!A.map||!A.map['metronome']||!BEATS.length) return;
+  const scale=100/TEMPO;     // keep clicks aligned when tempo is changed
+  const b=genClickBuffer(A.ctx, feelBeats(BEATS,FEEL), dur, METER, DBOFFSET, scale);
+  A.map['metronome'].buffer=b; PEAKS['metronome']=computePeaks(b,40000);
+  redraw(); restartStem('metronome');
+}
+document.querySelectorAll('[data-db]').forEach(b=>b.addEventListener('click',()=>{ DBOFFSET+=(+b.dataset.db); regenMetro(); }));
+const meterSel=document.getElementById('meter'); if(meterSel) meterSel.addEventListener('change',()=>{ METER=+meterSel.value||4; regenMetro(); });
+const feelSel=document.getElementById('feel'); if(feelSel) feelSel.addEventListener('change',()=>{ FEEL=+feelSel.value||1; regenMetro(); });
+
+// zoom slider — scales the visible waveform window
+const zoomEl=document.getElementById('zoom'), zoomVal=document.getElementById('zoomval');
+if(zoomEl) zoomEl.addEventListener('input',()=>{ const z=+zoomEl.value; if(zoomVal)zoomVal.textContent=z+'×'; setZoom(z); });
+function syncZoomUI(z){ if(zoomEl)zoomEl.value=z; if(zoomVal)zoomVal.textContent=z+'×'; }
+
+// overview bar: click anywhere to seek, scroll wheel to zoom (item 3)
+const ovEl=document.getElementById('overview');
+if(ovEl){
+  ovEl.addEventListener('click',e=>{ const r=ovEl.getBoundingClientRect(); seek((e.clientX-r.left)/r.width*dur); });
+  ovEl.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const dir=e.deltaY<0?1:-1, stepz=Math.max(1,Math.round(zoom*0.25));
+    const z=Math.max(1,Math.min(100,zoom+dir*stepz));
+    syncZoomUI(z); setZoom(z);
+  },{passive:false});
+}
+
+// ---- boot the engine for a real project ----
+if(REAL){
+  setupAudio().then(a=>{ AUDIO=a; ORIGDUR=dur; recomputeGains(); regenMetro(); place(); applySort(); setTimeout(detectChords,40); }).catch(e=>console.warn('audio init',e));
+}
+place();
+
+// ====================================================================
+//  PITCH / TEMPO  (items 4,5) — offline, non-destructive from o.orig.
+//  Time-stretch by overlap-add (pitch-preserving); pitch-shift = stretch
+//  then resample. playbackRate stays 1 so the transport clock is unaffected.
+//  Quality is "practice-grade" OLA, not studio phase-vocoder — flagged honestly.
+// ====================================================================
+let PITCH=0, TEMPO=100, ORIGDUR=0, ptBusy=false, ptTimer=null;
+const BASE_BPM = (PROJECT&&PROJECT.analysis&&PROJECT.analysis.bpm)>20 ? PROJECT.analysis.bpm : 120;
+let targetBpm = Math.round(BASE_BPM);
+function setTempoLabel(){ const el=document.getElementById('tempoval'); if(el) el.textContent=targetBpm+' bpm'; }
+function olaStretch(buffer, F, ctx){
+  F=Math.max(0.5,Math.min(2,F));
+  if(Math.abs(F-1)<1e-3) return buffer;
+  const ch=buffer.numberOfChannels, sr=buffer.sampleRate, inLen=buffer.length;
+  const outLen=Math.max(1,Math.round(inLen*F));
+  const out=ctx.createBuffer(ch,outLen,sr);
+  const win=2048, hop=512, aHop=hop/F;
+  const w=new Float32Array(win);
+  for(let i=0;i<win;i++) w[i]=0.5-0.5*Math.cos(2*Math.PI*i/(win-1));
+  for(let c=0;c<ch;c++){
+    const inp=buffer.getChannelData(c), outp=out.getChannelData(c), norm=new Float32Array(outLen);
+    let s=0,a=0;
+    while(s+win<=outLen){
+      const a0=Math.floor(a);
+      for(let k=0;k<win;k++){ const ii=a0+k; if(ii<inLen){ outp[s+k]+=inp[ii]*w[k]; norm[s+k]+=w[k]; } }
+      s+=hop; a+=aHop; if(a0+win>=inLen) break;
+    }
+    for(let i=0;i<outLen;i++){ if(norm[i]>1e-3) outp[i]/=norm[i]; }
+  }
+  return out;
+}
+function resampleLinear(buffer, newLen, ctx){
+  const ch=buffer.numberOfChannels, sr=buffer.sampleRate, inLen=buffer.length;
+  const out=ctx.createBuffer(ch, Math.max(1,newLen), sr);
+  for(let c=0;c<ch;c++){
+    const inp=buffer.getChannelData(c), outp=out.getChannelData(c), ratio=(inLen-1)/(newLen-1);
+    for(let i=0;i<newLen;i++){ const x=i*ratio, i0=x|0, f=x-i0; outp[i]=inp[i0]*(1-f)+((inp[i0+1]!==undefined?inp[i0+1]:inp[i0])*f); }
+  }
+  return out;
+}
+function pitchShiftBuffer(buffer, semis, ctx){
+  const r=Math.pow(2,semis/12);
+  return resampleLinear(olaStretch(buffer, r, ctx), buffer.length, ctx);
+}
+function ptBadge(on){
+  let b=document.getElementById('ptbadge');
+  if(on){ if(!b){ b=document.createElement('div'); b.id='ptbadge';
+    b.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);color:var(--text);padding:8px 16px;border-radius:20px;font-size:12px;z-index:60;box-shadow:var(--shadow)';
+    b.textContent='Processing audio…'; document.body.appendChild(b); } }
+  else if(b) b.remove();
+}
+function applyPitchTempo(){
+  if(!AUDIO||!AUDIO.ready||ptBusy) return;
+  ptBusy=true; ptBadge(true);
+  const wasPlaying=AUDIO.playing, durBefore=dur, frac=durBefore?t/durBefore:0;
+  if(wasPlaying) audioStop();
+  setTimeout(()=>{
+    try{
+      const ctx=AUDIO.ctx, tempoF=100/TEMPO;
+      Object.values(AUDIO.map).forEach(o=>{
+        if(!o.orig || o.leaf.id==='metronome') return;   // metronome regenerated separately
+        let b=o.orig;
+        if(PITCH!==0) b=pitchShiftBuffer(b,PITCH,ctx);
+        if(TEMPO!==100) b=olaStretch(b,tempoF,ctx);
+        o.buffer=b; PEAKS[o.leaf.id]=computePeaks(b,40000);
+      });
+      let mx=0; Object.values(AUDIO.map).forEach(o=>{ if(o.leaf.id!=='metronome'&&o.buffer&&o.buffer.duration>mx)mx=o.buffer.duration; });
+      if(mx) dur=mx;
+      regenMetro();
+      t=Math.min(frac*dur, dur); redraw(); place();
+    }catch(e){ console.warn('pitch/tempo',e); }
+    ptBusy=false; ptBadge(false);
+    if(wasPlaying) audioStart(t);
+  },30);
+}
+function schedulePT(){ clearTimeout(ptTimer); ptTimer=setTimeout(applyPitchTempo,220); }
+document.querySelectorAll('[data-pitch]').forEach(b=>b.addEventListener('click',()=>{
+  const v=b.dataset.pitch;
+  if(v==='reset') PITCH=0; else PITCH=Math.max(-12,Math.min(12,PITCH+(+v)));
+  const el=document.getElementById('pitchval'); if(el) el.textContent=(PITCH>0?'+':'')+PITCH;
+  schedulePT();
+}));
+document.querySelectorAll('[data-tempo]').forEach(b=>b.addEventListener('click',()=>{
+  const v=b.dataset.tempo;
+  if(v==='reset') targetBpm=Math.round(BASE_BPM);
+  else targetBpm=Math.max(Math.round(BASE_BPM*0.5),Math.min(Math.round(BASE_BPM*1.6),targetBpm+(+v)));
+  TEMPO = targetBpm/BASE_BPM*100;
+  setTempoLabel();
+  schedulePT();
+}));
+setTempoLabel();
+
+// ====================================================================
+//  LIVE CHORD DETECTION (item 6) — chroma via Goertzel on a mono mix,
+//  matched to maj/min templates. Computed once after load; shown as it plays.
+// ====================================================================
+let CHORDS=[];
+function goertzel(buf, start, N, f, sr){
+  const k=2*Math.cos(2*Math.PI*f/sr); let s1=0,s2=0;
+  for(let i=0;i<N;i++){ const s0=buf[start+i]+k*s1-s2; s2=s1; s1=s0; }
+  return s1*s1+s2*s2-k*s1*s2;
+}
+function detectChords(){
+  try{
+    if(!AUDIO) return;
+    const entries=Object.values(AUDIO.map).filter(o=>o.orig && o.leaf.id!=='metronome');
+    if(!entries.length) return;
+    const sr=entries[0].orig.sampleRate;
+    let N=0; entries.forEach(o=>{ N=Math.max(N,o.orig.length); });
+    const mix=new Float32Array(N);
+    entries.forEach(o=>{ const d=o.orig.getChannelData(0); for(let i=0;i<d.length;i++) mix[i]+=d[i]; });
+    // analyse one beat at a time so the chord can't change faster than the
+    // tempo (item 2). At slow/fast tempos this scales with BASE_BPM.
+    const beatLen=Math.max(0.35,Math.min(2.0, 60/(BASE_BPM||120)));
+    const frame=Math.floor(sr*beatLen), hop=frame;
+    const freqs=[]; for(let m=36;m<=83;m++) freqs.push([m%12, 440*Math.pow(2,(m-69)/12)]);
+    const maj=[0,4,7], min=[0,3,7];
+    const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+    ORIGDUR = N/sr; CHORDS=[];
+    for(let s=0;s+frame<=N;s+=hop){
+      const chroma=new Float32Array(12); let energy=0;
+      for(let j=0;j<freqs.length;j++){ const p=goertzel(mix,s,frame,freqs[j][1],sr); chroma[freqs[j][0]]+=p; energy+=p; }
+      let label='—';
+      if(energy>1e-3){
+        let best=0,bestScore=-Infinity,bestMin=false;
+        for(let root=0;root<12;root++){
+          let sc=0; for(const iv of maj) sc+=chroma[(root+iv)%12];
+          let scm=0; for(const iv of min) scm+=chroma[(root+iv)%12];
+          if(sc>bestScore){bestScore=sc;best=root;bestMin=false;}
+          if(scm>bestScore){bestScore=scm;best=root;bestMin=true;}
+        }
+        label=names[best]+(bestMin?'m':'');
+      }
+      CHORDS.push([s/sr, label]);
+    }
+    // de-blip: drop a lone one-beat chord wedged between two equal neighbours
+    for(let i=1;i<CHORDS.length-1;i++){
+      if(CHORDS[i][1]!==CHORDS[i-1][1] && CHORDS[i-1][1]===CHORDS[i+1][1])
+        CHORDS[i][1]=CHORDS[i-1][1];
+    }
+  }catch(e){ console.warn('chord detect',e); }
+}
+function currentChord(){
+  if(!CHORDS.length) return '—';
+  const tt = t*(TEMPO/100);   // map processed-time back to original timeline
+  let lab='—';
+  for(let i=0;i<CHORDS.length;i++){ if(CHORDS[i][0]<=tt) lab=CHORDS[i][1]; else break; }
+  return lab;
+}
+
+// ---- recent sessions (item 1) ----
+function loadRecents(){
+  fetch('/api/projects').then(r=>r.json()).then(list=>{
+    const host=document.getElementById('recents'); if(!host) return;
+    const clr=document.getElementById('clearRecents');
+    const has=Array.isArray(list)&&list.length;
+    if(clr) clr.classList.toggle('hidden', !has);
+    if(!has){ host.innerHTML='<div class="rec-empty">No saved sessions yet</div>'; return; }
+    host.innerHTML='';
+    list.slice(0,12).forEach(p=>{
+      const el=document.createElement('button'); el.className='rec';
+      const meta=[p.depth, (p.stems?p.stems+' stems':'')].filter(Boolean).join(' · ');
+      el.innerHTML='<span class="rdot"></span><span class="rtxt"><span class="rn"></span><span class="rm"></span></span>';
+      el.querySelector('.rn').textContent=p.name||'project';
+      el.querySelector('.rm').textContent=meta||(p.status||'');
+      if(REAL && PROJECT && p.id===PROJECT.id) el.style.background='var(--panel-2)';
+      el.addEventListener('click',()=>{ window.location='/studio/'+p.id; });
+      host.appendChild(el);
+    });
+  }).catch(()=>{});
+}
+(function(){
+  const clr=document.getElementById('clearRecents');
+  if(clr && !DESIGN) clr.addEventListener('click',()=>{
+    if(!confirm('Delete ALL saved sessions? This removes their separated stems from disk and cannot be undone.')) return;
+    fetch('/api/projects/clear',{method:'POST'}).then(r=>r.json()).then(()=>loadRecents()).catch(()=>{});
+  });
+})();
+if(!DESIGN) loadRecents();
+
+// ---- channel sort (Active/A–Z) + hide-below-peak threshold slider ----
+const SORT={mode:'active'};
+let HIDE_THRESH=0.0018;            // hide stems whose peak is below this (user-adjustable)
+function chanEnergy(el){
+  let mx=0;
+  el.querySelectorAll('[data-wave]').forEach(c=>{
+    const id=(c.dataset.wave||'').split('_')[0];   // PEAKS is keyed by plain id
+    const pk=PEAKS[id]; if(!pk) return;
+    for(let i=0;i<pk.length;i++) if(pk[i]>mx) mx=pk[i];
+  });
+  return mx;
+}
+function applySort(){
+  const host=document.getElementById('channels'); if(!host) return;
+  const chans=[...host.children].filter(c=>c.classList && c.classList.contains('channel'));
+  if(!chans.length) return;
+  const isMetro=el=>{ const id=el.querySelector('[data-wave]')?.dataset.wave||el.dataset.id||''; return id.split('_')[0]==='metronome'; };
+  const info=chans.map(el=>({el, e:chanEnergy(el), metro:isMetro(el),
+    name:(el.querySelector('.nm .n')?.textContent||el.dataset.id||'').trim().toLowerCase()}));
+  if(SORT.mode==='az') info.sort((a,b)=> (a.metro-b.metro) || a.name.localeCompare(b.name));
+  else                 info.sort((a,b)=> (a.metro-b.metro) || (b.e-a.e) || a.name.localeCompare(b.name));
+  info.forEach(o=>{
+    o.el.classList.toggle('inactive-hidden', !o.metro && o.e < HIDE_THRESH);
+    host.appendChild(o.el);
+  });
+  try{ redraw(); }catch(_){}
+}
+document.querySelectorAll('#sortctl button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#sortctl button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); SORT.mode=b.dataset.sort; applySort();
+}));
+(function(){
+  const num=document.getElementById('hideval'), sl=document.getElementById('hideslider');
+  function set(v, from){
+    v=Math.max(0, Math.min(0.05, isNaN(v)?0.0018:v));
+    HIDE_THRESH=v;
+    if(from!=='num' && num) num.value=v.toFixed(4);
+    if(from!=='slider' && sl) sl.value=Math.min(0.02, v);
+    applySort();
+  }
+  if(sl) sl.addEventListener('input',()=>set(parseFloat(sl.value),'slider'));
+  if(num){ num.addEventListener('input',()=>set(parseFloat(num.value),'num'));
+           num.addEventListener('change',()=>set(parseFloat(num.value),'change')); }
+})();
+
+
+// ---- color schemes (item 8) ----
+function applyTheme(tname){
+  document.body.classList.remove('theme-blue','theme-red');
+  if(tname==='blue') document.body.classList.add('theme-blue');
+  else if(tname==='red') document.body.classList.add('theme-red');
+  try{ localStorage.setItem('stemmy-theme', tname); }catch(_){}
+  if(typeof redraw==='function') redraw();
+}
+window.applyTheme=applyTheme;
+try{ applyTheme(localStorage.getItem('stemmy-theme')||'green'); }catch(_){ applyTheme('green'); }
+
+
+// ===================================================================
+//  APP FLOW  — upload, separate (SSE), studio, downloads
+//  (active when Flask is serving; standalone file stays a design preview)
+// ===================================================================
+const STATE = { pid: (REAL && PROJECT) ? PROJECT.id : null, depth: 'deep' };
+
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('show'));
+  const v=document.getElementById('v-'+name); if(v) v.classList.add('show');
+  if(name==='studio') setTimeout(redraw,60);
+}
+// workflow rail: light up steps up to the current one
+const STEP_ORDER=['upload','depth','processing','studio'];
+function setStep(name){
+  const idx=STEP_ORDER.indexOf(name);
+  document.querySelectorAll('.step').forEach(s=>{
+    const i=STEP_ORDER.indexOf(s.dataset.go);
+    s.classList.toggle('active', i===idx);
+    s.classList.toggle('done', i<idx);
+    const num=s.querySelector('.num');
+    if(num) num.textContent = (i<idx)?'✓':String(i+1);
+  });
+}
+function goStep(name){ showView(name); setStep(name); }
+
+// let the rail navigate, but only to steps that make sense
+let SEPARATING=false;
+document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
+  const go=b.dataset.go;
+  if(!DESIGN && !REAL && (go==='studio'||go==='processing')) return; // nothing there yet
+  // "Separate" with no active run shouldn't show a stale processing screen:
+  // send the user to Depth to (re)start, or to Studio if a result already exists.
+  if(go==='processing' && !SEPARATING){ goStep(REAL?'studio':'depth'); return; }
+  goStep(go);
+}));
+
+// ---- depth selection ----
+document.querySelectorAll('.card').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('.card').forEach(x=>x.classList.remove('active'));
+  c.classList.add('active');
+  if(c.dataset.depth) STATE.depth=c.dataset.depth;
+}));
+
+// reflect whether the optional ZFTurbo MSST model is installed on the Extended card
+if(!DESIGN){
+  fetch('/api/capabilities').then(r=>r.json()).then(cap=>{
+    const note=document.getElementById('ext-note');
+    if(note && cap && cap.msst){
+      note.style.opacity='.85';
+      note.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>MSST installed · ready';
+    }
+  }).catch(()=>{});
+}
+
+// ---- upload ----
+const fileInput=document.getElementById('fileinput');
+const pickBtn=document.getElementById('pickbtn');
+const dropzone=document.getElementById('dropzone');
+const uploadMsg=document.getElementById('uploadmsg');
+if(pickBtn) pickBtn.addEventListener('click',()=>fileInput.click());
+if(fileInput) fileInput.addEventListener('change',e=>{ if(e.target.files[0]) doUpload(e.target.files[0]); });
+if(dropzone){
+  ['dragenter','dragover'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.add('drag');}));
+  ['dragleave','drop'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.remove('drag');}));
+  dropzone.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) doUpload(f); });
+}
+async function doUpload(file){
+  uploadMsg.textContent='Uploading '+file.name+' …';
+  const fd=new FormData(); fd.append('file',file);
+  try{
+    const r=await fetch('/api/upload',{method:'POST',body:fd});
+    const j=await r.json();
+    if(!r.ok){ uploadMsg.textContent='Upload failed: '+(j.error||r.status); return; }
+    STATE.pid=j.id;
+    const us=document.querySelector('[data-go="upload"] small'); if(us) us.textContent=file.name;
+    uploadMsg.textContent='Uploaded. Choose a separation depth →';
+    goStep('depth');
+  }catch(err){ uploadMsg.textContent='Upload error: '+err.message; }
+}
+
+// ---- start separation (SSE) ----
+const startBtn=document.getElementById('startsep');
+if(startBtn) startBtn.addEventListener('click',()=>{
+  if(!STATE.pid){ goStep('upload'); return; }
+  startSeparation(STATE.pid, STATE.depth);
+});
+function passRow(p){
+  return `<div class="pass" data-pass="${p.key}">
+    <div class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></div>
+    <div class="pt"><div class="pn">${p.label}${p.experimental?' — experimental':''}</div><div class="pd">${p.detail||''}</div></div>
+    <div class="pbar"><i style="width:0%"></i></div><div class="pst">queued</div></div>`;
+}
+let procTimer=null, runStart=0, runRow=null;
+function stopProcTimer(){ if(procTimer){ clearInterval(procTimer); procTimer=null; } runRow=null; }
+function startSeparation(pid, depth){
+  SEPARATING=true;
+  goStep('processing');
+  const proc=document.querySelector('#v-processing .proc');
+  proc.innerHTML='<h2><span class="spin"></span> Separating…</h2>'
+    +'<div class="pnote">Models run one at a time and free VRAM between passes. '
+    +'The first run also downloads model weights (can be several minutes) — this screen stays live.</div>';
+  const es=new EventSource('/api/separate/'+pid+'?depth='+encodeURIComponent(depth));
+  es.onmessage=ev=>{
+    let m; try{ m=JSON.parse(ev.data); }catch(_){ return; }
+    if(m.type==='init'){
+      proc.querySelector('h2').innerHTML='<span class="spin"></span> Separating — '+m.passes.length+' passes';
+      m.passes.forEach(p=>proc.insertAdjacentHTML('beforeend', passRow(p)));
+    }
+    else if(m.type==='pass'){
+      const row=proc.querySelector('.pass[data-pass="'+m.key+'"]'); if(!row) return;
+      const running=(m.status==='run');
+      row.classList.toggle('run', running);
+      row.classList.toggle('done', m.status==='done');
+      const bar=row.querySelector('.pbar');
+      bar.classList.toggle('indet', running);                 // animated while working
+      if(!running) row.querySelector('.pbar i').style.width=(m.pct||100)+'%';
+      // elapsed timer on the active pass (real % isn't available from the model)
+      stopProcTimer();
+      const pst=row.querySelector('.pst');
+      if(running){
+        runStart=Date.now(); runRow=pst;
+        pst.textContent='0s';
+        procTimer=setInterval(()=>{ if(runRow) runRow.textContent=Math.round((Date.now()-runStart)/1000)+'s'; },1000);
+      } else {
+        pst.textContent = m.note ? m.note : 'done';
+        row.querySelector('.pic').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>';
+      }
+    }
+    else if(m.type==='error'){
+      stopProcTimer(); SEPARATING=false;
+      const h=proc.querySelector('h2'); if(h) h.innerHTML='⚠ Separation error';
+      proc.insertAdjacentHTML('beforeend','<div style="color:var(--warn);margin-top:12px;font-size:13px">'+(m.message||'unknown error')+'</div>');
+      es.close();
+    }
+    else if(m.type==='done'){
+      stopProcTimer(); es.close();
+      window.location='/studio/'+pid;   // reload into the real studio (server injects stems)
+    }
+  };
+  es.onerror=()=>{ /* keep waiting; a clean done already navigated away */ };
+}
+
+// ---- downloads ----
+function dlURL(pid, ids){ return '/api/download/'+pid+(ids&&ids.length?('?stems='+ids.join(',')):''); }
+wrap.addEventListener('click',e=>{
+  const dl=e.target.closest('[data-dl]');
+  if(dl && STATE.pid){ window.location=dlURL(STATE.pid,[dl.dataset.dl]); }
+});
+const dlSelBtn=document.getElementById('dlsel');
+const dlAllBtn=document.getElementById('dlall');
+if(dlSelBtn) dlSelBtn.addEventListener('click',()=>{
+  if(!STATE.pid) return;
+  const ids=[...document.querySelectorAll('.sel.on')].map(b=>b.dataset.sel).filter(Boolean);
+  window.location=dlURL(STATE.pid, ids);
+});
+if(dlAllBtn) dlAllBtn.addEventListener('click',()=>{ if(STATE.pid) window.location=dlURL(STATE.pid, null); });
+
+// ---- transport skip buttons ----
+const tbtns=document.querySelectorAll('.tcontrols .tbtn');
+if(tbtns[0]) tbtns[0].addEventListener('click',()=>seek(0));
+if(tbtns[1]) tbtns[1].addEventListener('click',()=>seek(t-5));
+if(tbtns[2]) tbtns[2].addEventListener('click',()=>seek(t+5));
+
+// ---- hydrate topbar + rail from the real project (or neutralize when empty) ----
+function setText(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; }
+function railSmall(go,v){ const e=document.querySelector('[data-go="'+go+'"] small'); if(e) e.textContent=v; }
+function fmtDur(s){ s=Math.round(s||0); return String(s/60|0).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
+function cap(s){ return s? s[0].toUpperCase()+s.slice(1): ''; }
+function hydrateHeader(){
+  if(REAL){
+    const pj=PROJECT, a=pj.analysis||{};
+    setText('projname', pj.source_name||'Track');
+    const bits=[]; if(pj.sample_rate) bits.push((pj.sample_rate/1000).toFixed(1)+' kHz');
+    if(pj.bit_depth) bits.push(pj.bit_depth+'-bit'); if(a.duration||pj.duration) bits.push(fmtDur(a.duration||pj.duration));
+    setText('projmeta', bits.join(' · '));
+    // topbar stats
+    setText('stat-bpm', a.bpm!=null? a.bpm.toFixed(1): '—');
+    setText('stat-stems', String(pj.stems.length));
+    // studio tempo strip (single source of truth, replaces the old inline defaults)
+    const bpmEl=document.querySelector('.tempo .bpm'); if(bpmEl) bpmEl.innerHTML=(a.bpm!=null? a.bpm.toFixed(1):'—')+' <small>bpm</small>';
+    railSmall('upload', pj.source_name||'');
+    railSmall('depth', (cap(pj.depth)||'')+' · '+pj.stems.length+' stems');
+    railSmall('processing','done'); railSmall('studio','mix · play · export');
+  } else if(!DESIGN){
+    setText('projname','No track loaded'); setText('projmeta','upload a file to begin');
+    setText('stat-bpm','—'); setText('stat-stems','0');
+    const bpmEl=document.querySelector('.tempo .bpm'); if(bpmEl) bpmEl.innerHTML='— <small>bpm</small>';
+    railSmall('upload','ready'); railSmall('depth',''); railSmall('processing','');
+  }
+}
+hydrateHeader();
+
+// ---- live GPU + CPU meter (polls the backend; no-op in standalone design mode) ----
+function setBar(bar, pct){
+  if(!bar) return;
+  bar.style.width=Math.max(2,Math.min(100,pct))+'%';
+  bar.style.background = pct>90 ? '#ff5a5a' : '';
+}
+function updateGPU(){
+  fetch('/api/gpu').then(r=>r.json()).then(g=>{
+    const bar=document.getElementById('gpubar'), txt=document.getElementById('gputext'), dev=document.getElementById('gpudev');
+    const cbar=document.getElementById('cpubar'), ctxt=document.getElementById('cputext');
+    // CPU
+    if(g.cpu!=null){ if(ctxt)ctxt.textContent=g.cpu+'%'; setBar(cbar,g.cpu); }
+    else { if(ctxt)ctxt.textContent='n/a'; }
+    // GPU
+    if(!g.available){ if(txt) txt.textContent='no CUDA GPU'; setBar(bar,0); if(dev) dev.textContent='CPU only'; return; }
+    const memPct=g.used_gb/g.total_gb*100;
+    const util=(g.util!=null? g.util : null);
+    // lead with utilisation %, memory secondary
+    if(txt) txt.textContent=(util!=null? util+'%  ·  ' : '')+g.used_gb.toFixed(1)+'/'+g.total_gb+' GB';
+    setBar(bar, Math.max(memPct, util!=null? util : 0));
+    if(dev) dev.textContent=(g.name||'GPU').replace('NVIDIA GeForce ','')+(g.cuda?' · CUDA '+g.cuda:'');
+  }).catch(()=>{});
+}
+if(!DESIGN){ updateGPU(); setInterval(updateGPU, 2000); }
+
+// ---- settings panel (cog) ----
+const cog=document.getElementById('cog');
+if(cog) cog.addEventListener('click',()=>{
+  let ov=document.getElementById('cogov');
+  if(ov){ ov.remove(); return; }
+  ov=document.createElement('div'); ov.id='cogov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;z-index:50';
+  const a=(PROJECT&&PROJECT.analysis)||{};
+  const info = REAL&&PROJECT ? `
+      <div class="srow"><span>Track</span><b>${PROJECT.source_name||'—'}</b></div>
+      <div class="srow"><span>Depth</span><b>${cap(PROJECT.depth)||'—'}</b></div>
+      <div class="srow"><span>Stems</span><b>${PROJECT.stems.length}</b></div>
+      <div class="srow"><span>Tempo</span><b>${a.bpm!=null?a.bpm.toFixed(1)+' bpm':'—'}</b></div>`
+    : `<div class="srow"><span>No track loaded</span><b>—</b></div>`;
+  ov.innerHTML=`<div style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;width:380px;max-width:92vw">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <b style="font-size:15px">Settings</b>
+      <button class="btn" id="cogx" style="padding:4px 12px">Close</button></div>
+    <div style="font-size:11px;letter-spacing:.08em;color:var(--muted-2);text-transform:uppercase;margin:4px 0 6px">Project</div>
+    ${info}
+    <div style="font-size:11px;letter-spacing:.08em;color:var(--muted-2);text-transform:uppercase;margin:16px 0 6px">GPU</div>
+    <div class="srow"><span id="cog-gpu-n">checking…</span><b id="cog-gpu-m"></b></div>
+    <div style="font-size:11px;letter-spacing:.08em;color:var(--muted-2);text-transform:uppercase;margin:16px 0 8px">Color scheme</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn themebtn" data-theme="green" style="flex:1"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#36e27e;margin-right:6px"></span>Green</button>
+      <button class="btn themebtn" data-theme="blue" style="flex:1"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b9eff;margin-right:6px"></span>Blue</button>
+      <button class="btn themebtn" data-theme="red" style="flex:1"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ff5a5a;margin-right:6px"></span>Red</button>
+    </div>
+    <div style="font-size:11px;letter-spacing:.08em;color:var(--muted-2);text-transform:uppercase;margin:16px 0 8px">Actions</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" id="cog-new">Upload another track</button>
+      ${REAL?'<button class="btn" id="cog-redo">Re-run separation</button>':''}
+    </div>
+    <div style="font-size:11px;color:var(--muted-2);margin-top:16px;line-height:1.5">
+      Stems are saved under <code>projects/</code> in the Stemmy folder. Everything runs locally on your GPU — nothing is uploaded.</div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+  document.getElementById('cogx').addEventListener('click',()=>ov.remove());
+  const nb=document.getElementById('cog-new'); if(nb) nb.addEventListener('click',()=>location='/');
+  const rb=document.getElementById('cog-redo'); if(rb) rb.addEventListener('click',()=>{ ov.remove(); goStep('depth'); });
+  ov.querySelectorAll('.themebtn').forEach(tb=>tb.addEventListener('click',()=>{ applyTheme(tb.dataset.theme); }));
+  fetch('/api/gpu').then(r=>r.json()).then(g=>{
+    const n=document.getElementById('cog-gpu-n'), m=document.getElementById('cog-gpu-m'); if(!n) return;
+    if(!g.available){ n.textContent='No CUDA GPU'; m.textContent='CPU only'; return; }
+    n.textContent=(g.name||'GPU').replace('NVIDIA GeForce ',''); m.textContent=g.used_gb.toFixed(1)+' / '+g.total_gb+' GB · CUDA '+(g.cuda||'');
+  }).catch(()=>{});
+});
+
+// ---- initial view: home shows Upload (+ resume), only /studio opens studio ----
+const VIEW = (typeof window.__VIEW__!=='undefined' && window.__VIEW__) || (DESIGN?'design':'home');
+function showResume(){
+  if(!REAL || !PROJECT) return;
+  const host=document.getElementById('dropzone'); if(!host) return;
+  if(document.getElementById('resumebar')) return;
+  const bar=document.createElement('div'); bar.id='resumebar';
+  bar.style.cssText='margin-top:18px;padding:12px 16px;border:1px solid var(--line);border-radius:12px;display:flex;align-items:center;gap:12px;justify-content:center;background:rgba(var(--green-rgb),.06)';
+  bar.innerHTML='<span style="font-size:13px;color:var(--muted)">Last session</span>'
+    +'<b style="font-size:13px">'+(PROJECT.source_name||'project')+'</b>'
+    +'<button class="btn" id="resumebtn" style="padding:7px 16px">Resume →</button>';
+  host.appendChild(bar);
+  document.getElementById('resumebtn').addEventListener('click',()=>{ window.location='/studio/'+PROJECT.id; });
+}
+if(DESIGN){ goStep('studio'); }
+else if(VIEW==='studio' && REAL){ goStep('studio'); }
+else { goStep('upload'); showResume(); }
+</script>
+</body>
+</html>

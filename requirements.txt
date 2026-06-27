@@ -1,0 +1,23 @@
+# ---- Stemmy requirements ----
+# NOTE: torch is deliberately NOT listed here. A bare "torch" line resolves to
+# the CPU-only PyPI wheel, which will not use a Blackwell (RTX 50-series) GPU,
+# and a "+cu128" pin is not portable across machines/Python versions. So setup.bat
+# installs these requirements first, then force-installs the correct CUDA build
+# from the cu128 index LAST (otherwise audio-separator drags a CPU torch back in):
+#
+#   pip install -r requirements.txt
+#   pip install --force-reinstall --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cu128
+#
+# Verify the GPU is seen:  python -c "import torch; print(torch.cuda.is_available())"
+# (Blackwell sm_120 needs cu128 or newer; on a different GPU swap the index URL.)
+
+Flask>=3.0
+
+# separation engine — pulls onnxruntime-gpu + model downloaders
+audio-separator[gpu]>=0.18
+
+# tempo / key / beat analysis (baseline). Optional upgrades: madmom, beat-this
+librosa>=0.10
+soundfile>=0.12
+numpy>=1.24
+psutil>=5.9
