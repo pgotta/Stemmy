@@ -6,8 +6,6 @@ ride / crash**, guitar, piano, keys, other — then solo, mute, level, pan, scru
 a beat grid, shift pitch/tempo, watch live chord detection, and export stems as WAV or a
 zip. Everything runs on your machine; **no audio ever leaves it**.
 
-> "Stemmy" is a placeholder name — rename freely.
-
 ![Stemmy studio with the drum split](docs/screenshots/studio.png)
 
 ---
