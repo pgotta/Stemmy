@@ -31,6 +31,7 @@ zip. Everything runs on your machine; **no audio ever leaves it**.
 ## What it does
 
 - **Local & private.** All separation and playback happen on your machine. No uploads, no cloud, no account.
+- **Drop a file or paste a YouTube link.** Either upload audio (WAV/MP3/FLAC/M4A/OGG/AIFF) or paste a YouTube URL on the Upload screen — Stemmy fetches the audio locally with yt-dlp and runs the exact same separation flow.
 - **A pipeline, not one model.** No single model separates everything well, so Stemmy chains specialised open-source models in sequential passes — the same approach the paid tools use internally. Each pass loads one model, runs, frees VRAM, then hands its output to the next. That keeps peak memory low enough for an 8 GB card.
 - **Reliable drum split.** Deep separates the kit into kick / snare / toms / hi-hat / ride / crash, nested under Drums.
 - **A real mixing studio.** Per-stem solo / mute / level / pan, real waveforms, a zoomable timeline, a beat-locked metronome with time-signature selector, offline pitch (±12) and tempo shift, live chord readout, colour themes, and per-stem or zip export.
@@ -101,7 +102,13 @@ python run_stemmy.py            # http://127.0.0.1:5002
 python run_stemmy.py --port 5005
 ```
 
-Upload a track, pick a depth, watch the passes stream in, then mix in the studio.
+Upload a track **or paste a YouTube link** on the Upload screen, pick a depth, watch the passes stream in, then mix in the studio.
+
+### YouTube links
+
+The Upload screen has an "or paste a YouTube link" field. Stemmy downloads the audio with **yt-dlp** and extracts it to WAV with **ffmpeg**, then treats it like any uploaded file. Both `yt-dlp` and `imageio-ffmpeg` (a bundled ffmpeg, so you don't have to install one) are pulled in by `setup.bat` / `requirements.txt`; a system ffmpeg on your PATH is used if present. The fetched video's thumbnail is saved and shown next to the track in the Recent Sessions list. The fetch runs on your machine — only download tracks you have the rights to.
+
+**If a link won't fetch:** re-run `setup.bat` (it updates yt-dlp), then try again. If it still fails, YouTube has likely changed something — update yt-dlp directly with `pip install -U yt-dlp`, or check [github.com/yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp) for the latest. The Upload screen shows this same hint when a fetch fails.
 
 ## Separation depths
 
@@ -134,7 +141,7 @@ Once a separation finishes you land in the studio:
 - **Pitch & tempo** — offline, non-destructive pitch shift (±12 semitones) and tempo/BPM change.
 - **Live chord readout** as the track plays, plus a tempo/beat-grid overview.
 - **Channel sort** (Active / A–Z) and a **hide-below-peak slider** to tuck away empty stems.
-- **Colour themes** and recent-session history.
+- **Colour themes**, recent-session history (with a YouTube thumbnail per track), and a **collapsible side panel** (the handle on the panel's edge).
 
 You can also open `app/templates/index.html` **directly** in a browser to iterate the UI on mock
 data; served through Flask it renders the real project and plays the real stems.

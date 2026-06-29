@@ -110,6 +110,11 @@ if errorlevel 1 (
   echo torch          CUDA build already active - skipping.
 )
 
+REM --- 3) keep yt-dlp current (YouTube link import). YouTube changes often,
+REM so re-running setup.bat refreshes it - this is what fixes most fetch fails.
+echo yt-dlp         updating YouTube import (yt-dlp) ...
+pip install -U yt-dlp >nul 2>&1
+
 echo.
 echo Verifying the GPU is visible to torch ...
 python -c "import torch as T; ok=T.cuda.is_available(); print('  torch  :', T.__version__); print('  CUDA   :', ok); print('  GPU    :', T.cuda.get_device_name(0) if ok else 'CPU only')"

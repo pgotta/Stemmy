@@ -99,7 +99,20 @@
   .iconbtn svg{width:17px;height:17px}
 
   /* ---------- body split ---------- */
-  .body{display:flex;flex:1;min-height:0}
+  .body{display:flex;flex:1;min-height:0;position:relative}
+
+  /* collapsible left rail */
+  .rail{transition:width .18s ease, padding .18s ease}
+  .body.rail-collapsed .rail{width:0;padding-left:0;padding-right:0;border-right:none;overflow:hidden}
+  .railtoggle{
+    position:absolute;top:74px;left:202px;transform:translateX(-50%);z-index:7;
+    width:20px;height:46px;border-radius:7px;display:grid;place-items:center;cursor:pointer;
+    background:var(--panel-2);border:1px solid var(--line);color:var(--muted);transition:left .18s ease,color .15s,background .15s;
+  }
+  .railtoggle:hover{color:var(--text);background:var(--panel)}
+  .railtoggle svg{width:14px;height:14px;transition:transform .18s ease}
+  .body.rail-collapsed .railtoggle{left:0;transform:translateX(0)}
+  .body.rail-collapsed .railtoggle svg{transform:rotate(180deg)}
 
   /* step rail */
   .rail{
@@ -307,6 +320,23 @@
   .drop p{margin:0 0 22px;color:var(--muted);font-size:14px}
   .drop .fmts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px}
   .drop .fmts span{font-family:var(--mono);font-size:10.5px;color:var(--muted-2);border:1px solid var(--line);padding:3px 8px;border-radius:6px}
+  .ytrow{margin-top:26px}
+  .ytsep{position:relative;text-align:center;margin-bottom:16px}
+  .ytsep::before{content:"";position:absolute;top:50%;left:0;right:0;height:1px;background:var(--line)}
+  .ytsep span{position:relative;background:var(--panel);padding:0 12px;font-size:11.5px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.6px}
+  .ytinput{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:6px 6px 6px 12px;transition:.15s}
+  .ytinput:focus-within{border-color:color-mix(in srgb,var(--green) 45%,var(--line))}
+  .ytinput svg{width:20px;height:20px;color:#ff5a5a;flex:0 0 auto}
+  .ytinput input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:13.5px;font-family:inherit;min-width:0}
+  .ytinput input::placeholder{color:var(--muted-2)}
+  .ytinput .btn{flex:0 0 auto}
+  .ythint{margin-top:10px;font-size:11.5px;color:var(--muted-2);text-align:center}
+  .ythelp{display:none;margin-top:9px;font-size:11.5px;color:var(--muted);text-align:center;line-height:1.6;
+    background:rgba(255,90,90,.06);border:1px solid rgba(255,90,90,.18);border-radius:9px;padding:9px 12px}
+  .ythelp.show{display:block}
+  .ythelp a{color:var(--green);text-decoration:none}
+  .ythelp a:hover{text-decoration:underline}
+  .ythelp code{font-family:var(--mono);font-size:10.5px;background:rgba(0,0,0,.3);padding:1px 5px;border-radius:4px}
 
   .depth{width:min(900px,100%);padding:30px}
   .depth h2{font-size:20px;margin:0 0 5px}
@@ -384,6 +414,8 @@
   .rec{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;cursor:pointer;border:1px solid transparent;text-align:left;width:100%}
   .rec:hover{background:var(--panel-2);border-color:var(--line)}
   .rec .rdot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;opacity:.8}
+  .rec .rthumb{width:30px;height:30px;border-radius:6px;flex-shrink:0;overflow:hidden;background:var(--green-deep);border:1px solid var(--line);display:block}
+  .rec .rthumb img{width:100%;height:100%;object-fit:cover;display:block}
   .rec .rtxt{min-width:0;flex:1;overflow:hidden}
   .rec .rn{display:block;font-size:12px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rec .rm{display:block;font-size:10px;color:var(--muted-2);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -473,6 +505,9 @@
         <div id="gpudev" style="margin-top:6px;font-size:10px">RTX 5060 · CUDA 12.8</div>
       </div>
     </nav>
+    <button class="railtoggle" id="railToggle" title="Collapse / expand panel" aria-label="Collapse panel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
 
     <!-- STAGE -->
     <div class="stage">
@@ -605,6 +640,18 @@
             <button class="btn primary" style="margin:0 auto" id="pickbtn">Choose audio file</button>
             <input type="file" id="fileinput" accept=".wav,.mp3,.flac,.m4a,.ogg,.aiff,.aif" style="display:none">
             <div class="fmts"><span>WAV</span><span>MP3</span><span>FLAC</span><span>M4A</span><span>OGG</span><span>AIFF</span></div>
+            <div class="ytrow">
+              <div class="ytsep"><span>or paste a YouTube link</span></div>
+              <div class="ytinput">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.6 7.2a2.8 2.8 0 0 0-2-2C17.9 4.8 12 4.8 12 4.8s-5.9 0-7.6.4a2.8 2.8 0 0 0-2 2A29 29 0 0 0 2 12a29 29 0 0 0 .4 4.8 2.8 2.8 0 0 0 2 2C6.1 19.2 12 19.2 12 19.2s5.9 0 7.6-.4a2.8 2.8 0 0 0 2-2A29 29 0 0 0 22 12a29 29 0 0 0-.4-4.8z"/><path d="m10 15 5-3-5-3z" fill="currentColor"/></svg>
+                <input type="text" id="yturl" placeholder="https://www.youtube.com/watch?v=…" autocomplete="off" spellcheck="false">
+                <button class="btn" id="ytbtn">Fetch audio</button>
+              </div>
+              <div class="ythint">Audio is downloaded locally on your machine for separation. Use tracks you have the rights to.</div>
+              <div class="ythelp" id="ythelp">
+                Didn't work? <b>Re-run setup.bat</b>, then try again. Still failing? YouTube changes often — update yt-dlp with <code>pip install -U yt-dlp</code>, or see <a href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noopener">github.com/yt-dlp/yt-dlp</a>.
+              </div>
+            </div>
             <div id="uploadmsg" style="margin-top:14px;font-size:13px;color:var(--muted)"></div>
           </div>
         </div>
@@ -1366,7 +1413,10 @@ function loadRecents(){
     list.slice(0,12).forEach(p=>{
       const el=document.createElement('button'); el.className='rec';
       const meta=[p.depth, (p.stems?p.stems+' stems':'')].filter(Boolean).join(' · ');
-      el.innerHTML='<span class="rdot"></span><span class="rtxt"><span class="rn"></span><span class="rm"></span></span>';
+      const lead = p.cover
+        ? '<span class="rthumb"><img src="'+p.cover+'" alt="" loading="lazy" onerror="this.remove()"></span>'
+        : '<span class="rdot"></span>';
+      el.innerHTML=lead+'<span class="rtxt"><span class="rn"></span><span class="rm"></span></span>';
       el.querySelector('.rn').textContent=p.name||'project';
       el.querySelector('.rm').textContent=meta||(p.status||'');
       if(REAL && PROJECT && p.id===PROJECT.id) el.style.background='var(--panel-2)';
@@ -1383,6 +1433,20 @@ function loadRecents(){
   });
 })();
 if(!DESIGN) loadRecents();
+
+// ---- collapsible left rail ----
+(function(){
+  const body=document.querySelector('.body'), tog=document.getElementById('railToggle');
+  if(!body||!tog) return;
+  try{ if(localStorage.getItem('stemmy.railCollapsed')==='1') body.classList.add('rail-collapsed'); }catch(_){}
+  function sync(){ const c=body.classList.contains('rail-collapsed'); tog.title=(c?'Expand':'Collapse')+' panel'; }
+  sync();
+  tog.addEventListener('click',()=>{
+    const c=body.classList.toggle('rail-collapsed');
+    try{ localStorage.setItem('stemmy.railCollapsed', c?'1':'0'); }catch(_){}
+    sync();
+  });
+})();
 
 // ---- channel sort (Active/A–Z) + hide-below-peak threshold slider ----
 const SORT={mode:'active'};
@@ -1520,6 +1584,30 @@ async function doUpload(file){
     uploadMsg.textContent='Uploaded. Choose a separation depth →';
     goStep('depth');
   }catch(err){ uploadMsg.textContent='Upload error: '+err.message; }
+}
+
+// ---- youtube link ----
+const ytUrl=document.getElementById('yturl');
+const ytBtn=document.getElementById('ytbtn');
+if(ytBtn) ytBtn.addEventListener('click',()=>doYoutube(ytUrl&&ytUrl.value));
+if(ytUrl) ytUrl.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); doYoutube(ytUrl.value); } });
+async function doYoutube(url){
+  url=(url||'').trim();
+  const help=document.getElementById('ythelp'); if(help) help.classList.remove('show');
+  if(!url){ uploadMsg.textContent='Paste a YouTube link first.'; return; }
+  uploadMsg.textContent='Fetching audio from the link … this can take a moment.';
+  if(ytBtn){ ytBtn.disabled=true; ytBtn.textContent='Fetching…'; }
+  try{
+    const r=await fetch('/api/youtube',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+    const j=await r.json();
+    if(!r.ok){ uploadMsg.textContent='Couldn’t fetch that link: '+(j.error||r.status); if(help) help.classList.add('show'); return; }
+    STATE.pid=j.id;
+    const nm=j.title||'YouTube audio';
+    const us=document.querySelector('[data-go="upload"] small'); if(us) us.textContent=nm;
+    uploadMsg.textContent='Got “'+nm+'”. Choose a separation depth →';
+    goStep('depth');
+  }catch(err){ uploadMsg.textContent='YouTube error: '+err.message; if(help) help.classList.add('show'); }
+  finally{ if(ytBtn){ ytBtn.disabled=false; ytBtn.textContent='Fetch audio'; } }
 }
 
 // ---- start separation (SSE) ----

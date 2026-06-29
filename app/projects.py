@@ -114,6 +114,7 @@ def list_all():
             out.append({"id": d["id"], "name": d["source_name"],
                         "status": d["status"], "created": d["created"],
                         "depth": d.get("depth"),
+                        "cover": ("/api/cover/" + d["id"]) if d.get("cover") else None,
                         "stems": len(d.get("stems") or [])})
         except Exception:
             continue

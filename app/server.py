@@ -19,6 +19,7 @@ before the model stack is installed.
 import io
 import json
 import queue
+import shutil
 import threading
 import zipfile
 from pathlib import Path
@@ -114,6 +115,44 @@ def create_app():
                                sample_rate=sr, bit_depth=bits, duration=dur)
         return jsonify({"id": pid, "project": _public(proj)})
 
+    @app.post("/api/youtube")
+    def api_youtube():
+        """Fetch audio from a YouTube (or other yt-dlp-supported) link and create
+        a project from it, exactly like an uploaded file."""
+        from . import youtube
+        data = request.get_json(silent=True) or {}
+        url = (data.get("url") or "").strip()
+        if not url:
+            return jsonify({"error": "no link"}), 400
+        try:
+            title, audio_path, thumb_url = youtube.fetch_audio(url, UPLOADS)
+        except youtube.YouTubeError as e:
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:  # unexpected — still report cleanly
+            first = (str(e).splitlines() or ["error"])[0]
+            return jsonify({"error": "fetch failed: " + first[:160]}), 500
+
+        ext = audio_path.suffix.lower()
+        if ext not in ALLOWED:
+            ext = ".wav"
+        fname = (title or "youtube-audio") + ext
+        pid = projects.new_id(fname)
+        dest = projects.project_dir(pid)
+        dest.mkdir(parents=True, exist_ok=True)
+        src_path = dest / ("source" + ext)
+        shutil.move(str(audio_path), str(src_path))
+
+        sr, bits, dur = _probe(src_path)
+        proj = projects.create(pid, fname, str(src_path),
+                               sample_rate=sr, bit_depth=bits, duration=dur)
+        proj["source_kind"] = "youtube"
+        proj["source_url"] = url
+        cover = youtube.save_thumbnail(thumb_url, dest)   # best-effort
+        if cover:
+            proj["cover"] = cover
+        projects.save(proj)
+        return jsonify({"id": pid, "project": _public(proj), "title": title})
+
     # ---- separation (SSE) --------------------------------------------
     @app.get("/api/separate/<pid>")
     def api_separate(pid):
@@ -167,6 +206,18 @@ def create_app():
         if not target.exists():
             abort(404)
         return send_file(target, conditional=True)  # range support for seeking
+
+    @app.get("/api/cover/<pid>")
+    def cover(pid):
+        proj = projects.load(pid)
+        cov = proj.get("cover") if proj else None
+        if not isinstance(cov, str) or not cov:
+            abort(404)
+        pdir = projects.project_dir(pid).resolve()
+        target = (pdir / cov).resolve()
+        if pdir not in target.parents or not target.exists():
+            abort(404)
+        return send_file(target, conditional=True)
 
     @app.get("/api/download/<pid>")
     def download(pid):
