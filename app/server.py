@@ -45,6 +45,15 @@ def create_app():
     app = Flask(__name__)
     app.config["MAX_CONTENT_LENGTH"] = 512 * 1024 * 1024  # 512 MB uploads
 
+    # Bring any persisted karaoke batches back into memory so a session that was
+    # interrupted by a restart is still restorable (finished instrumentals live
+    # on disk in their project folders).
+    try:
+        from . import karaoke
+        karaoke.load_all()
+    except Exception:
+        pass
+
     # ---- UI -----------------------------------------------------------
     def render(project=None, view="home"):
         html = TEMPLATE.read_text(encoding="utf-8")
@@ -82,10 +91,12 @@ def create_app():
 
     @app.get("/api/capabilities")
     def api_capabilities():
-        from . import msst
+        from . import msst, tabs, identify
         return jsonify({
             "msst": msst.is_installed(str(MODEL_DIR)),
             "msst_model": msst.model_label(str(MODEL_DIR)),
+            "tabs": tabs.is_available(),
+            "identify": identify.shazam_available(),
         })
 
     @app.get("/api/project/<pid>")
@@ -196,6 +207,226 @@ def create_app():
                         headers={"Cache-Control": "no-cache",
                                  "X-Accel-Buffering": "no"})
 
+    @app.post("/api/identify/<pid>")
+    def api_identify(pid):
+        """Identify the song (Shazam) and fetch synced lyrics (LRCLIB). Accepts an
+        optional JSON body {title, artist} to skip ID and fetch lyrics directly."""
+        from . import identify
+        proj = projects.load(pid)
+        if not proj:
+            abort(404)
+        data = request.get_json(silent=True) or {}
+        title = (data.get("title") or "").strip()
+        artist = (data.get("artist") or "").strip()
+        identified = False
+
+        if not title:  # try to recognise from the original audio
+            if not identify.shazam_available():
+                return jsonify({"error": "no_shazam",
+                                "message": "Song ID isn't installed (run get_lyrics.bat). "
+                                           "You can type the artist and title instead."}), 200
+            src = proj.get("source_path")
+            info = identify.identify_song(src) if src else None
+            if not info or not info.get("title"):
+                return jsonify({"error": "no_match",
+                                "message": "Couldn't identify the song. "
+                                           "Type the artist and title to fetch lyrics."}), 200
+            title, artist = info["title"], info.get("artist") or ""
+            identified = True
+            # rename the project to "Artist - Title" and pull the album art
+            new_name = (f"{artist} - {title}" if artist else title)
+            proj["source_name"] = new_name
+            img = info.get("image")
+            if img:
+                from . import youtube
+                cover = youtube.save_thumbnail(img, projects.project_dir(pid), "cover.jpg")
+                if cover:
+                    proj["cover"] = cover
+
+        dur = proj.get("duration")
+        try:
+            dur = int(round(float(dur))) if dur else None
+        except Exception:
+            dur = None
+        lyr = identify.fetch_lyrics(title, artist, proj.get("album"), dur)
+
+        proj["song"] = {"title": title, "artist": artist, "identified": identified}
+        cover_url = ("/api/cover/" + pid) if proj.get("cover") else None
+        song_name = proj.get("source_name")
+        if lyr:
+            proj["lyrics"] = {"synced": lyr["synced"], "plain": lyr["plain"]}
+            projects.save(proj)
+            return jsonify({"title": lyr.get("trackName") or title,
+                            "artist": lyr.get("artistName") or artist,
+                            "identified": identified, "song_name": song_name, "cover": cover_url,
+                            "synced": lyr["synced"], "plain": lyr["plain"],
+                            "has_synced": bool(lyr["synced"])})
+        projects.save(proj)
+        return jsonify({"title": title, "artist": artist, "identified": identified,
+                        "song_name": song_name, "cover": cover_url,
+                        "synced": [], "plain": "",
+                        "error": "no_lyrics",
+                        "message": "Found the song but no lyrics on LRCLIB."}), 200
+
+    # ---- karaoke playlist batch --------------------------------------
+    @app.post("/api/karaoke")
+    def api_karaoke_start():
+        from . import youtube, karaoke
+        data = request.get_json(silent=True) or {}
+        url = (data.get("url") or "").strip()
+        depth = data.get("depth") or "quick"
+        if not url:
+            return jsonify({"error": "no link"}), 400
+        try:
+            job = karaoke.start(url, depth, str(MODEL_DIR), UPLOADS)
+        except youtube.YouTubeError as e:
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            first = (str(e).splitlines() or ["error"])[0]
+            return jsonify({"error": "couldn't start batch: " + first[:160]}), 500
+        return jsonify(karaoke.public(job))
+
+    @app.get("/api/karaoke/saved")
+    def api_karaoke_saved():
+        """List persisted batches (newest first) for the restore picker."""
+        from . import karaoke
+        return jsonify(karaoke.list_saved())
+
+    @app.post("/api/karaoke/<job_id>/retry")
+    def api_karaoke_retry(job_id):
+        """Re-run every errored / interrupted track in a batch (e.g. after a
+        transient YouTube 403). Returns the job so the UI can re-attach to the
+        events stream."""
+        from . import karaoke
+        job = karaoke.retry(job_id, str(MODEL_DIR), UPLOADS)
+        if not job:
+            return jsonify({"error": "nothing to retry"}), 400
+        return jsonify(karaoke.public(job))
+
+    @app.get("/api/karaoke/<job_id>")
+    def api_karaoke_get(job_id):
+        """Return one batch's full state — used to reopen a saved session.
+        Verifies each done track's instrumental still exists on disk (healing
+        stale paths from the project folder); missing files are downgraded so
+        the UI never claims a track is playable when it isn't."""
+        from . import karaoke
+        job = karaoke.get(job_id)
+        if not job:
+            abort(404)
+        changed = False
+        for it in job["items"]:
+            if it.get("status") != "done":
+                continue
+            p = Path(it["instrumental"]) if it.get("instrumental") else None
+            if p is None or not p.exists():
+                healed = False
+                if it.get("pid"):
+                    pdir = projects.project_dir(it["pid"])
+                    for cand in (pdir / "instrumental.wav", pdir / "instrumental.mp3"):
+                        if cand.exists():
+                            it["instrumental"] = str(cand)
+                            healed = changed = True
+                            break
+                if not healed:
+                    it["status"] = "missing"
+                    it["error"] = "instrumental file not found — re-run this track"
+                    changed = True
+        if changed:
+            karaoke._persist(job)
+        return jsonify(karaoke.public(job))
+
+    @app.post("/api/karaoke/<job_id>/delete")
+    def api_karaoke_delete(job_id):
+        from . import karaoke
+        return jsonify({"deleted": karaoke.delete(job_id)})
+
+    @app.get("/api/karaoke/<job_id>/events")
+    def api_karaoke_events(job_id):
+        from . import karaoke
+        job = karaoke.get(job_id)
+        if not job:
+            abort(404)
+
+        @stream_with_context
+        def gen():
+            yield _sse({"type": "init", **karaoke.public(job)})
+            # if the job already finished before the client connected, flush state
+            if job["status"] == "done":
+                yield _sse({"type": "done",
+                            "completed": sum(1 for i in job["items"] if i["status"] == "done"),
+                            "total": len(job["items"])})
+                return
+            while True:
+                ev = job["_q"].get()
+                yield _sse(ev)
+                if ev.get("type") == "done":
+                    break
+
+        return Response(gen(), mimetype="text/event-stream",
+                        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+    @app.get("/api/lyrics/<pid>")
+    def api_lyrics(pid):
+        """Return stored lyrics (+ cover url) for a project, e.g. a karaoke track."""
+        proj = projects.load(pid)
+        if not proj:
+            abort(404)
+        lyr = proj.get("lyrics") or {}
+        return jsonify({"synced": lyr.get("synced") or [],
+                        "plain": lyr.get("plain") or "",
+                        "title": proj.get("source_name"),
+                        "cover": ("/api/cover/" + pid) if proj.get("cover") else None})
+
+    @app.get("/api/karaoke/<job_id>/track/<int:n>")
+    def api_karaoke_track(job_id, n):
+        from . import karaoke
+        job = karaoke.get(job_id)
+        if not job:
+            abort(404)
+        it = next((i for i in job["items"] if i["n"] == n), None)
+        if not it:
+            abort(404)
+        # 1) the path recorded when the batch ran
+        p = Path(it["instrumental"]) if it.get("instrumental") else None
+        # 2) fallback: the track's own project folder — covers a moved install
+        #    or a restored session whose absolute path no longer resolves
+        if (p is None or not p.exists()) and it.get("pid"):
+            pdir = projects.project_dir(it["pid"])
+            for cand in (pdir / "instrumental.wav", pdir / "instrumental.mp3"):
+                if cand.exists():
+                    p = cand
+                    it["instrumental"] = str(cand)   # heal the stored path
+                    karaoke._persist(job)
+                    break
+        if p is None or not p.exists():
+            abort(404)
+        return send_file(str(p), conditional=True)
+
+    @app.get("/api/karaoke/<job_id>/download")
+    def api_karaoke_download(job_id):
+        from . import karaoke
+        job = karaoke.get(job_id)
+        if not job:
+            abort(404)
+        done = [it for it in job["items"] if it["status"] == "done" and it.get("instrumental")]
+        if not done:
+            return jsonify({"error": "no finished instrumentals yet"}), 400
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for it in done:
+                wav = Path(it["instrumental"])
+                safe = "".join(c for c in (it.get("title") or "track")
+                               if c.isalnum() or c in " -_").strip() or "track"
+                base = f"{it['n']+1:02d} - {safe} (instrumental)"
+                if wav.exists():
+                    z.write(str(wav), arcname=base + ".wav")
+                mp3 = wav.with_suffix(".mp3")
+                if mp3.exists():
+                    z.write(str(mp3), arcname=base + ".mp3")
+        buf.seek(0)
+        return send_file(buf, mimetype="application/zip", as_attachment=True,
+                         download_name="karaoke_instrumentals.zip")
+
     # ---- stem + download serving -------------------------------------
     @app.get("/stems/<pid>/<path:sub>")
     def stems(pid, sub):
@@ -219,6 +450,58 @@ def create_app():
             abort(404)
         return send_file(target, conditional=True)
 
+    @app.post("/api/tab/<pid>/<stem_id>")
+    def api_tab(pid, stem_id):
+        """Transcribe one isolated stem to MIDI + a beta ASCII tab (on demand)."""
+        from . import tabs
+        if not tabs.is_available():
+            return jsonify({"error": "Tab/MIDI export isn't installed. Run get_tabs.bat "
+                                     "to enable audio-to-MIDI transcription."}), 400
+        proj = projects.load(pid)
+        if not proj:
+            abort(404)
+        stem = next((s for s in proj.get("stems", []) if s.get("id") == stem_id), None)
+        if not stem:
+            return jsonify({"error": "unknown stem"}), 404
+
+        pdir = projects.project_dir(pid).resolve()
+        rel = stem.get("_rel") or ("stems/" + stem_id + ".wav")
+        wav = (pdir / rel).resolve()
+        if pdir not in wav.parents or not wav.exists():
+            return jsonify({"error": "stem audio not found"}), 404
+
+        sid = "".join(c for c in stem_id if c.isalnum() or c in "-_") or "stem"
+        stype = (stem.get("type") or "").lower()
+        instrument = "bass" if ("bass" in stem_id.lower() or stype == "bass") else "guitar"
+        is_drum = stype in ("drums", "kit", "percussion") or stem_id.lower() in (
+            "drums", "kick", "snare", "hihat", "hh", "toms", "ride", "crash", "cymbals")
+
+        midi_rel = "stems/" + sid + ".mid"
+        midi_path = pdir / midi_rel
+        try:
+            n = tabs.stem_to_midi(str(wav), str(midi_path))
+        except RuntimeError as e:
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            first = (str(e).splitlines() or ["error"])[0]
+            return jsonify({"error": "transcription failed: " + first[:160]}), 500
+
+        if is_drum:
+            tab_text = ("# Drum stems don't map to string tab (they're unpitched).\n"
+                        "# The MIDI export above captures the hits — open it in a DAW "
+                        "with a drum map.\n")
+        else:
+            try:
+                tab_text = tabs.midi_to_tab(str(midi_path), instrument)
+            except Exception as e:
+                tab_text = "(tab render failed: " + str(e)[:120] + ")"
+
+        return jsonify({
+            "stem": stem_id, "instrument": instrument, "notes": n,
+            "midi_url": "/stems/" + pid + "/" + sid + ".mid",
+            "tab": tab_text,
+        })
+
     @app.get("/api/download/<pid>")
     def download(pid):
         proj = projects.load(pid)
@@ -229,6 +512,7 @@ def create_app():
         stems_dir = projects.project_dir(pid) / "stems"
 
         mem = io.BytesIO()
+        added_mid = 0
         with zipfile.ZipFile(mem, "w", zipfile.ZIP_DEFLATED) as z:
             for s in proj.get("stems", []):
                 if want is not None and s["id"] not in want:
@@ -237,6 +521,23 @@ def create_app():
                 fp = projects.project_dir(pid) / rel
                 if fp.exists():
                     z.write(fp, arcname=Path(rel).name)
+                # include a previously-transcribed MIDI for this stem, if present
+                sid = "".join(c for c in s["id"] if c.isalnum() or c in "-_")
+                mid = stems_dir / (sid + ".mid")
+                if mid.exists():
+                    z.write(str(mid), arcname=sid + ".mid")
+                    added_mid += 1
+            # add a combined full mix (all stems minus the click) as WAV + MP3,
+            # unless the user asked for a specific subset of stems
+            if want is None:
+                try:
+                    from . import mixdown
+                    base = Path(proj["source_name"]).stem or "mix"
+                    for f in mixdown.build_combined(proj, drop_ids={"metronome"},
+                                                    drop_types={"click"}, stem="full_mix"):
+                        z.write(str(f), arcname=base + " (full mix)" + f.suffix)
+                except Exception:
+                    pass
         mem.seek(0)
         name = Path(proj["source_name"]).stem + "_stems.zip"
         return send_file(mem, mimetype="application/zip",

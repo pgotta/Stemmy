@@ -62,7 +62,7 @@ class Pipeline:
             stem_index["metronome"] = {
                 "id": "metronome", "parent": None,
                 "name": meta.get("name", "Metronome"), "type": meta.get("type", "click"),
-                "clr": meta.get("clr"), "beta": False,
+                "clr": meta.get("clr"), "beta": True,
                 "size": dest.stat().st_size,
                 "url": "/stems/" + data["id"] + "/metronome.wav",
                 "_rel": rel, "muted_default": True,

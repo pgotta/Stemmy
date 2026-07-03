@@ -18,6 +18,9 @@ from GitHub.
   - [check_models.bat](#check_modelsbat)
   - [fix_gpu.bat](#fix_gpubat)
   - [get_msst.bat](#get_msstbat)
+  - [get_tabs.bat](#get_tabsbat)
+  - [get_lyrics.bat](#get_lyricsbat)
+  - [update_ytdlp.bat](#update_ytdlpbat)
 
 ## One-time setup, then run
 
@@ -27,6 +30,9 @@ from GitHub.
    the studio at `http://127.0.0.1:5002`.
 3. *(optional)* **`fix_gpu.bat`** — once, as admin, if the GPU throttles when the window loses focus.
 4. *(optional)* **`get_msst.bat`** — once, to enable the experimental **Extended** depth.
+5. *(optional)* **`get_tabs.bat`** — once, to enable **MIDI + Tab export** (beta) on each stem.
+6. *(optional)* **`get_lyrics.bat`** — once, to enable **song ID** (lyrics work without it via manual entry).
+7. *(as needed)* **`update_ytdlp.bat`** — when YouTube imports start returning **403 Forbidden**, to pull the latest yt-dlp.
 
 ## What each launcher does
 
@@ -39,6 +45,9 @@ from GitHub.
 | `check_models.bat` | List every model `audio-separator` can auto-download, plus Stemmy's mapping. | Picking / verifying model names |
 | `fix_gpu.bat` | (admin) High Performance power plan + EcoQoS opt-out for the model's `python.exe`. | If the GPU throttles on a laptop |
 | `get_msst.bat` | Install ZFTurbo MSST + the 53-stem checkpoint for **Extended** (optional, ~2 GB). | Once, to try Extended |
+| `get_tabs.bat` | Install Basic Pitch (audio->MIDI, ONNX) for per-stem **MIDI + Tab** export (optional). | Once, to enable tabs |
+| `get_lyrics.bat` | Install shazamio for **song identification** (lyrics themselves need no install). | Once, to enable song ID |
+| `update_ytdlp.bat` | Update yt-dlp to the latest release. | When YouTube imports start hitting **403 Forbidden** |
 
 ## Encoding notes (CRLF / SmartScreen)
 
@@ -46,7 +55,7 @@ from GitHub.
   VS Code "CRLF", or run `unix2dos`), or `cmd.exe` may mis-parse multi-line blocks.
 - First launch may trigger **SmartScreen** ("Windows protected your PC"): *More info → Run anyway*.
   These are plain scripts you can read in full below.
-- `setup.bat` / `get_msst.bat` need normal user rights; **`fix_gpu.bat` self-elevates to admin**
+- `setup.bat` / `get_msst.bat` / `get_tabs.bat` / `get_lyrics.bat` need normal user rights; **`fix_gpu.bat` self-elevates to admin**
   (it changes the power plan and per-process power-throttling).
 
 ## Full contents
@@ -476,4 +485,135 @@ echo     See README - search "ZFTurbo MSST install" for details.
 echo.
 pause
 exit /b 1
+```
+
+### get_tabs.bat
+
+Installs Spotify's Basic Pitch (audio-to-MIDI) plus a light ONNX runtime so the **TAB** button appears on each stem. Installed with `--no-deps` on purpose: basic-pitch's metadata hard-pins TensorFlow on Python 3.11+, which has no matching wheel on Windows/py3.12 and would fail — Stemmy only needs the bundled `.onnx` model + `onnxruntime`. Run `setup.bat` first.
+
+```bat
+@echo off
+REM ============================================================
+REM  get_tabs.bat  -  enable MIDI + Tab export (beta) in Stemmy
+REM
+REM  This installs Spotify's Basic Pitch (audio -> MIDI) plus a
+REM  light ONNX runtime. We install with --no-deps on purpose:
+REM  basic-pitch's metadata hard-pins TensorFlow on Python 3.11+,
+REM  which has no matching wheel on Windows/py3.12 and would fail.
+REM  Stemmy only needs the ONNX runtime (the model ships as .onnx),
+REM  so we add the handful of real runtime deps ourselves.
+REM ============================================================
+setlocal
+cd /d "%~dp0"
+
+if exist ".venv\Scripts\activate.bat" (
+  call ".venv\Scripts\activate.bat"
+) else (
+  echo No .venv found - run setup.bat first.
+  pause
+  exit /b 1
+)
+
+echo.
+echo Installing Basic Pitch (audio-to-MIDI) without its TensorFlow pin ...
+pip install "basic-pitch==0.4.0" --no-deps || goto :fail
+
+echo.
+echo Installing the ONNX runtime + light transcription deps ...
+pip install onnxruntime "pretty_midi>=0.2.9" "resampy>=0.2.2,<0.4.3" "mir_eval>=0.6" || goto :fail
+REM librosa / numpy / scipy already come from requirements.txt
+
+echo.
+echo Verifying ...
+python -c "from basic_pitch.inference import predict; import onnxruntime; print('Tab/MIDI export ready.')" || goto :fail
+
+echo.
+echo Done. Restart Stemmy (run.bat) and the TAB button will appear on each stem.
+pause
+exit /b 0
+
+:fail
+echo.
+echo Install failed. You can retry, or open an issue with the message above.
+pause
+exit /b 1
+```
+
+### get_lyrics.bat
+
+Installs **shazamio** so Stemmy can identify a track from its audio. Lyrics themselves come from LRCLIB over plain HTTP and need no package, so even without this you can type a title/artist and still get synced lyrics. Run `setup.bat` first.
+
+```bat
+@echo off
+REM ============================================================
+REM  get_lyrics.bat  -  enable song ID + lyrics in Stemmy
+REM  Installs shazamio (song recognition). Lyrics come from
+REM  LRCLIB (free, no key) and need no extra package.
+REM ============================================================
+setlocal
+cd /d "%~dp0"
+if exist ".venv\Scripts\activate.bat" (
+  call ".venv\Scripts\activate.bat"
+) else (
+  echo No .venv found - run setup.bat first.
+  pause
+  exit /b 1
+)
+echo.
+echo Installing shazamio (song identification) ...
+pip install shazamio || goto :fail
+echo.
+python -c "import shazamio; print('Song ID + lyrics ready.')" || goto :fail
+echo.
+echo Done. Restart Stemmy (run.bat) and use "Show lyrics" in the studio.
+pause
+exit /b 0
+:fail
+echo.
+echo Install failed. You can still type a title/artist to fetch lyrics without song ID.
+pause
+exit /b 1
+```
+
+### update_ytdlp.bat
+
+Updates yt-dlp to the latest release. YouTube changes its stream signatures often, which is the
+usual cause of **`HTTP Error 403: Forbidden`** on a *subset* of tracks in a karaoke batch (some
+download fine, others 403). A stale yt-dlp is the most common reason. Run this, reopen Stemmy, then
+use **Retry failed** in the karaoke panel to re-run just the blocked tracks — Stemmy also tries the
+`android`/`ios`/`tv` player clients and retries automatically, but the latest yt-dlp fixes the rest.
+
+```bat
+@echo off
+setlocal
+cd /d "%~dp0"
+title Stemmy - update yt-dlp
+
+if exist ".venv\Scripts\activate.bat" (
+  call ".venv\Scripts\activate.bat"
+) else (
+  echo [!] No .venv found - run setup.bat first.
+  pause & exit /b 1
+)
+
+echo ==========================================================
+echo   Updating yt-dlp
+echo ==========================================================
+echo.
+echo YouTube changes its streams often, which is the usual cause of
+echo "HTTP Error 403: Forbidden" on some tracks. Updating yt-dlp to the
+echo latest release fixes the large majority of those failures.
+echo.
+echo Updating yt-dlp to the newest version ...
+python -m pip install -U yt-dlp
+echo.
+if errorlevel 1 (
+  echo [!] Update failed. Check your internet connection and try again.
+) else (
+  echo [ok] yt-dlp is up to date.
+  echo     Reopen Stemmy, then use "Retry failed" in the karaoke panel
+  echo     to re-run any tracks that hit a 403.
+)
+echo.
+pause
 ```

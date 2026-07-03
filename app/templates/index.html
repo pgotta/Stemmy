@@ -79,6 +79,13 @@
     background:rgba(8,12,10,.5);min-width:0;
   }
   .proj .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex-shrink:0}
+  .proj .projthumb{width:30px;height:30px;border-radius:6px;object-fit:cover;flex-shrink:0;border:1px solid var(--line)}
+  .topacts{display:flex;align-items:center;gap:8px;margin-left:18px}
+  .topact{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:9px;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--muted);font-size:12.5px;font-weight:550;cursor:pointer;transition:.14s;font-family:inherit}
+  .topact svg{width:15px;height:15px}
+  .topact:hover{color:var(--text);border-color:var(--green-dim)}
+  .topact.on{color:var(--green);border-color:var(--green);background:rgba(var(--green-rgb),.1)}
   .proj .name{font-size:13px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .proj .meta{font-size:11px;color:var(--muted);white-space:nowrap}
 
@@ -105,13 +112,13 @@
   .rail{transition:width .18s ease, padding .18s ease}
   .body.rail-collapsed .rail{width:0;padding-left:0;padding-right:0;border-right:none;overflow:hidden}
   .railtoggle{
-    position:absolute;top:74px;left:202px;transform:translateX(-50%);z-index:7;
-    width:20px;height:46px;border-radius:7px;display:grid;place-items:center;cursor:pointer;
+    position:absolute;top:50%;left:202px;transform:translate(-50%,-50%);z-index:7;
+    width:22px;height:60px;border-radius:8px;display:grid;place-items:center;cursor:pointer;
     background:var(--panel-2);border:1px solid var(--line);color:var(--muted);transition:left .18s ease,color .15s,background .15s;
   }
   .railtoggle:hover{color:var(--text);background:var(--panel)}
-  .railtoggle svg{width:14px;height:14px;transition:transform .18s ease}
-  .body.rail-collapsed .railtoggle{left:0;transform:translateX(0)}
+  .railtoggle svg{width:15px;height:15px;transition:transform .18s ease}
+  .body.rail-collapsed .railtoggle{left:0;transform:translate(0,-50%)}
   .body.rail-collapsed .railtoggle svg{transform:rotate(180deg)}
 
   /* step rail */
@@ -145,7 +152,7 @@
 
   /* ---------- views ---------- */
   .stage{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
-  .view{display:none;flex:1;min-height:0;flex-direction:column}
+  .view{display:none;flex:1;min-height:0;flex-direction:column;position:relative;z-index:1}
   .view.show{display:flex}
 
   /* ===== STUDIO VIEW ===== */
@@ -155,11 +162,11 @@
 
   /* tempo strip */
   .tempo{
-    display:flex;align-items:stretch;gap:0;margin-bottom:16px;
+    display:flex;align-items:stretch;flex-wrap:wrap;gap:0;margin-bottom:16px;
     border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
     background:linear-gradient(180deg,var(--panel-2),var(--panel));
   }
-  .tempo .block{padding:13px 18px;border-right:1px solid var(--line-soft);display:flex;flex-direction:column;justify-content:center;gap:3px}
+  .tempo .block{padding:13px 18px;border-right:1px solid var(--line-soft);display:flex;flex-direction:column;justify-content:center;gap:3px;flex:0 0 auto}
   .tempo .block .k{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted-2)}
   .tempo .bpm{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--green);line-height:1;letter-spacing:-1px}
   .tempo .bpm small{font-size:12px;color:var(--muted);font-weight:400}
@@ -177,7 +184,7 @@
   .zoomctl{display:flex;align-items:center;gap:7px;color:var(--muted)}
   .zoomctl input[type=range]{width:90px;accent-color:var(--green);cursor:pointer}
   .zoomctl b{font-size:11px;color:var(--muted);min-width:24px}
-  .tempo .ctrls{display:flex;align-items:center;gap:8px;padding:0 16px;border-left:1px solid var(--line-soft)}
+  .tempo .ctrls{display:flex;align-items:center;gap:8px;padding:0 16px;border-left:1px solid var(--line-soft);flex:0 0 auto;margin-left:auto}
   .pill{
     display:flex;align-items:center;gap:7px;padding:8px 13px;border-radius:9px;
     border:1px solid var(--line);background:rgba(0,0,0,.25);font-size:12px;color:var(--muted);transition:.15s;
@@ -244,9 +251,17 @@
   .channel.open .chev svg{transform:rotate(90deg)}
   .chev.spacer-chev{visibility:hidden}
 
-  .wave{flex:1;height:46px;position:relative;min-width:60px;border-radius:7px;overflow:hidden;background:rgba(0,0,0,.22)}
+  .wave{flex:1;height:46px;position:relative;min-width:60px;border-radius:7px;overflow:hidden;background:rgba(0,0,0,.22);cursor:crosshair}
   .sub .wave{height:34px}
   .wave canvas{position:absolute;inset:0;width:100%;height:100%}
+
+  /* double-click a stem to fill the screen with just that one */
+  #channels.focusmode > .channel:not(.focused){display:none}
+  #channels.focusmode > .channel.focused .row{align-items:stretch}
+  #channels.focusmode > .channel.focused .wave{height:min(62vh,640px);min-height:320px}
+  #channels.focusmode > .channel.focused .subwrap{display:none}
+  .focushint{display:none;text-align:center;font-size:11.5px;color:var(--muted-2);margin:2px 0 8px}
+  #channels.focusmode ~ .focushint,.focushint.on{display:block}
   .playhead{position:absolute;top:0;bottom:0;width:1.5px;background:var(--green);box-shadow:0 0 7px var(--green);left:21%;opacity:.9;pointer-events:none}
 
   .lvl{width:118px;flex-shrink:0;display:flex;align-items:center;gap:9px}
@@ -262,6 +277,26 @@
   .sm.mute.on{background:var(--danger);border-color:var(--danger);color:#1a0606}
   .sm.dl svg{width:15px;height:15px}
   .sm.dl:hover{color:var(--green);border-color:var(--green-dim)}
+  .sm.tab{width:auto;padding:0 8px;font-size:10px;letter-spacing:.04em}
+  .sm.tab:hover{color:var(--aqua);border-color:var(--aqua)}
+  .sm.tab.busy{color:var(--muted-2);opacity:.7;pointer-events:none}
+
+  /* ---- tab / MIDI modal ---- */
+  .tabmodal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(3px)}
+  .tabmodal.show{display:flex}
+  .tabmodal .box{width:min(880px,92vw);max-height:86vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,.7)}
+  .tabmodal .hd{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--line-soft)}
+  .tabmodal .hd h3{margin:0;font-size:16px;letter-spacing:-.2px}
+  .tabmodal .hd .tag{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--warn);border:1px solid var(--warn);border-radius:5px;padding:1px 6px}
+  .tabmodal .hd .x{margin-left:auto;width:30px;height:30px;border-radius:8px;border:1px solid var(--line);color:var(--muted);display:grid;place-items:center;cursor:pointer;background:rgba(0,0,0,.2)}
+  .tabmodal .hd .x:hover{color:var(--text)}
+  .tabmodal .body-scroll{padding:16px 18px;overflow:auto;flex:1}
+  .tabmodal pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.5;color:var(--text);white-space:pre;overflow-x:auto}
+  .tabmodal .status{color:var(--muted-2);font-size:13px;display:flex;align-items:center;gap:10px}
+  .tabmodal .ft{display:flex;gap:10px;padding:13px 18px;border-top:1px solid var(--line-soft);flex-wrap:wrap}
+  .tabmodal .note{font-size:11px;color:var(--muted-2);flex:1;min-width:180px}
+  .spin{width:15px;height:15px;border:2px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
 
   .subwrap{display:grid;grid-template-rows:0fr;transition:grid-template-rows .26s ease}
   .channel.open .subwrap{grid-template-rows:1fr}
@@ -337,6 +372,124 @@
   .ythelp a{color:var(--green);text-decoration:none}
   .ythelp a:hover{text-decoration:underline}
   .ythelp code{font-family:var(--mono);font-size:10.5px;background:rgba(0,0,0,.3);padding:1px 5px;border-radius:4px}
+  .karlink{display:block;margin:16px auto 0;background:none;border:none;color:var(--aqua);font-size:12.5px;cursor:pointer;font-family:inherit;opacity:.9;transition:.14s}
+  .karlink:hover{opacity:1;text-decoration:underline}
+  .karlist{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+  .karlist .kit{display:flex;align-items:center;gap:10px;padding:8px 11px;border:1px solid var(--line-soft);border-radius:9px;background:rgba(0,0,0,.15)}
+  .karlist .kn{font-family:var(--mono);font-size:11px;color:var(--muted-2);width:22px;flex:0 0 auto;text-align:right}
+  .karlist .kt{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .karlist .ks{font-size:10.5px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;flex:0 0 auto;color:var(--muted-2)}
+  .karlist .ks.downloading{color:var(--aqua)} .karlist .ks.separating{color:var(--green)} .karlist .ks.mixing{color:var(--warn)}
+  .karlist .ks.done{color:var(--green)} .karlist .ks.error{color:var(--danger)} .karlist .ks.queued{color:var(--muted-2)}
+  .karlist .ks.missing{color:var(--warn)} .karlist .kit.missing{border-color:var(--warn);opacity:.75}
+  .karlist .ks.interrupted{color:var(--warn)} .karlist .kit.interrupted{border-color:var(--warn);opacity:.8}
+  .karlist .kit.done{border-color:var(--green-dim)} .karlist .kit.error{border-color:var(--danger)}
+  .karlist .kit.playing{border-color:var(--green);background:rgba(var(--green-rgb),.12)}
+  .karlist .kit.done{cursor:pointer}
+  .karplayer{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;border:1px solid var(--green-dim);border-radius:10px;background:rgba(var(--green-rgb),.06)}
+  .karplayer .kp-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);cursor:pointer;font-size:13px;flex:0 0 auto}
+  .karplayer .kp-btn:hover{border-color:var(--green-dim)}
+  .karplayer .kp-play{background:var(--green);color:#04140b;border-color:var(--green);font-size:14px}
+  .karplayer .kp-now{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .karplayer .kp-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-2)}
+  .karplayer .kp-title{font-size:13.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .karqhead{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted-2);margin:4px 0 6px}
+  .karwarn{font-size:12px;color:var(--warn);border:1px solid var(--warn);border-radius:9px;padding:9px 12px;margin-bottom:10px;line-height:1.5}
+  .karwarn code{font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.3);padding:1px 5px;border-radius:4px}
+  .karlist .kit.upnext{border-color:var(--warn)}
+  .karlist .kit .knext{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--warn);margin-left:6px}
+
+  /* saved karaoke batches — restore after a restart */
+  .karsaved{margin:0 0 14px}
+  .karsaved-h{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted-2);margin:0 0 7px}
+  .karsaved-h span{text-transform:none;letter-spacing:0;color:var(--muted-2);opacity:.8}
+  .krow{display:flex;align-items:center;gap:11px;padding:9px 11px;border:1px solid var(--line-soft);border-radius:9px;background:rgba(0,0,0,.15);margin-bottom:6px}
+  .krow .kmeta{flex:1;min-width:0}
+  .krow .kname{font-size:13px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .krow .ksub{font-size:10.5px;color:var(--muted-2);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .krow .kopen{flex:0 0 auto;font-size:12px;padding:6px 12px;border-radius:8px;border:1px solid var(--green-dim);background:rgba(var(--green-rgb),.08);color:var(--green);cursor:pointer;font-family:inherit}
+  .krow .kopen:hover{background:rgba(var(--green-rgb),.16)}
+  .krow .kopen[disabled]{opacity:.45;cursor:default;border-color:var(--line);color:var(--muted-2);background:transparent}
+  .krow .kdel{flex:0 0 auto;width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--muted-2);cursor:pointer;font-size:12px}
+  .krow .kdel:hover{color:var(--danger);border-color:var(--danger)}
+
+  /* ---- karaoke performance stage (big, couch-readable) ---- */
+  .karstage{position:fixed;inset:0;z-index:200;display:none;flex-direction:column;background:#05070a;overflow:hidden}
+  .karstage.show{display:flex}
+  /* base gradient — always present so the stage is never pure black */
+  .karstage .ks-bg{position:absolute;inset:0;background:radial-gradient(60% 60% at 50% 30%,rgba(var(--green-rgb),.10),transparent 70%),#05070a;z-index:0}
+  /* album cover backdrop — independent of the visualizer */
+  .karstage .ks-cover{position:absolute;inset:0;z-index:1;pointer-events:none;background-size:cover;background-position:center;filter:brightness(.4) saturate(1.08);opacity:0;transition:opacity .4s;display:none}
+  .karstage .ks-cover.on{display:block;opacity:1}
+  /* MilkDrop canvas — sits above the cover, independent toggle */
+  .karstage .ks-viz{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;opacity:.7;display:none}
+  .karstage .ks-viz.on{display:block}
+  .karstage .ks-close{position:absolute;top:18px;right:20px;z-index:7;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.5);color:var(--muted);font-size:16px;cursor:pointer}
+  .karstage .ks-close:hover{color:var(--text)}
+  .karstage .ks-settings{position:absolute;top:18px;right:68px;z-index:7;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.5);color:var(--muted);font-size:16px;cursor:pointer}
+  .karstage .ks-settings:hover{color:var(--text)}
+  .karstage .ks-vizmenu{top:66px;right:20px;left:auto}
+  .karstage .ks-main{position:relative;z-index:3;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:40px;padding:40px 6vw;text-align:center;min-height:0}
+  .karstage .ks-lyrics{display:flex;flex-direction:column;gap:22px;max-width:1100px;padding:28px 48px;border-radius:22px;background:radial-gradient(80% 80% at 50% 50%,rgba(0,0,0,.55),rgba(0,0,0,0))}
+  .karstage .ks-prev{font-size:clamp(18px,2.4vw,30px);color:var(--muted-2);opacity:.7;min-height:1.2em}
+  .karstage .ks-cur{font-size:clamp(34px,6vw,74px);font-weight:750;line-height:1.15;color:var(--text);text-shadow:0 2px 30px rgba(0,0,0,.6)}
+  .karstage .ks-next{font-size:clamp(20px,3vw,40px);color:var(--muted);min-height:1.2em}
+  .karstage .ks-bar{position:relative;z-index:4;display:flex;align-items:center;gap:16px;padding:16px 24px;background:rgba(0,0,0,.55);border-top:1px solid var(--line-soft);backdrop-filter:blur(4px)}
+  .karstage .ks-now{display:flex;flex-direction:column;gap:2px;min-width:0;flex:0 0 auto;max-width:26vw}
+  .karstage .ks-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-2)}
+  .karstage .ks-title{font-size:15px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .karstage .ks-transport{display:flex;gap:10px;flex:0 0 auto}
+  .karstage .ks-tb{width:44px;height:44px;border-radius:11px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);cursor:pointer;font-size:15px}
+  .karstage .ks-tb:hover{border-color:var(--green-dim)}
+  .karstage .ks-play{background:var(--green);color:#04140b;border-color:var(--green);font-size:17px}
+  .karstage .ks-progress{flex:1;height:7px;border-radius:4px;background:var(--line);position:relative;cursor:pointer;min-width:80px}
+  .karstage .ks-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--green);border-radius:4px}
+  .karstage .ks-time{font-size:12px;color:var(--muted);flex:0 0 auto;min-width:40px;text-align:right}
+  .karstage .ks-queue-toggle{flex:0 0 auto;padding:8px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit}
+  .karstage .ks-queue-toggle:hover{color:var(--text)}
+  .karstage .ks-queue{position:absolute;top:0;right:0;bottom:0;width:320px;max-width:80vw;z-index:6;background:rgba(8,10,14,.97);border-left:1px solid var(--line);transform:translateX(100%);transition:transform .22s;padding:14px 14px 20px;overflow:auto}
+  .karstage .ks-queue.open{transform:translateX(0);z-index:9}
+  /* sticky header inside the panel — close button on the LEFT so it never sits
+     under the stage's exit/settings buttons (top-right); divider underneath */
+  .karstage .ks-qhead{position:sticky;top:0;display:flex;align-items:center;gap:10px;padding:4px 2px 10px;margin-bottom:8px;border-bottom:1px solid var(--line);background:rgba(8,10,14,.97);z-index:1}
+  .karstage .ks-qx{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:var(--muted);font-size:14px;cursor:pointer;flex:0 0 auto}
+  .karstage .ks-qx:hover{color:var(--text);border-color:var(--green-dim)}
+  .karstage .ks-qh{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted-2)}
+  .karstage .ks-qrow{display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:9px;border:1px solid var(--line-soft);margin-bottom:6px;cursor:pointer;transition:.13s}
+  .karstage .ks-qrow:hover{border-color:var(--green-dim)}
+  .karstage .ks-qrow.playing{border-color:var(--green);background:rgba(var(--green-rgb),.12)}
+  .karstage .ks-qrow .qn{font-family:var(--mono);font-size:11px;color:var(--muted-2);width:20px;text-align:right;flex:0 0 auto}
+  .karstage .ks-qrow .qt{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .karstage .ks-qrow .qbadge{font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--warn);flex:0 0 auto}
+
+  /* ---- background layers: album cover (bottom) + MilkDrop canvas (above it) ----
+     The two are fully independent. Either, both, or neither can be shown.
+     Album cover sits at z-index 0; MilkDrop canvas at z-index 0 but later in the
+     DOM so it paints over the cover when both are on. Both live below .view
+     (z-index 1), so studio panels turn translucent (.viz-live) to reveal them. */
+  .vizcoverbg{position:absolute;inset:0;z-index:0;pointer-events:none;background-size:cover;background-position:center;filter:brightness(.34) saturate(1.08);opacity:0;transition:opacity .4s;display:none}
+  .vizcoverbg.on{display:block;opacity:1}
+  .vizbg{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0;transition:opacity .35s;display:none}
+  .vizbg.on{display:block}
+  /* the ambient backdrop belongs to the studio only — never the upload/depth/processing screens */
+  .stage:not(.viz-scope) .vizbg,
+  .stage:not(.viz-scope) .vizcoverbg{display:none !important}
+  /* when either backdrop is active, let the studio's opaque panels breathe */
+  .viz-live .studio-top{background:color-mix(in srgb,var(--bg) 80%,transparent)}
+  .viz-live .channel{background:linear-gradient(180deg,color-mix(in srgb,var(--panel-2) 78%,transparent),color-mix(in srgb,var(--panel) 78%,transparent))}
+  .viz-live .overview{background:color-mix(in srgb,var(--panel) 68%,transparent)}
+  .stage{position:relative}
+  .vizmenu{position:fixed;top:58px;left:50%;z-index:120;width:250px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 24px 60px -18px rgba(0,0,0,.7);padding:14px;display:none}
+  .vizmenu.show{display:block}
+  .vizmenu h4{margin:0 0 10px;font-size:13px}
+  .vizmenu .vrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:9px 0;font-size:12.5px;color:var(--muted)}
+  .vizmenu select,.vizmenu input[type=range]{accent-color:var(--green)}
+  .vizmenu select{background:var(--panel-3);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:4px 6px;font-size:12px;font-family:inherit}
+  .vizmenu .vsw{width:38px;height:22px;border-radius:11px;background:var(--line);position:relative;cursor:pointer;transition:.15s;flex:0 0 auto}
+  .vizmenu .vsw.on{background:var(--green)}
+  .vizmenu .vsw::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s}
+  .vizmenu .vsw.on::after{left:18px}
+  .vizmenu .vhint{font-size:10.5px;color:var(--muted-2);margin-top:8px;line-height:1.5}
 
   .depth{width:min(900px,100%);padding:30px}
   .depth h2{font-size:20px;margin:0 0 5px}
@@ -395,6 +548,63 @@
   .adj select{background:var(--panel-3);color:var(--text);border:none;border-radius:6px;font-size:11px;padding:3px 4px;cursor:pointer;font-family:var(--mono)}
   .chordv{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--leaf);line-height:1}
 
+  /* ---- scrolling chord ribbon (Chordify-style) — inline on the tempo line ---- */
+  .chordribbon{position:relative;flex:1 1 320px;min-width:260px;height:56px;align-self:center;margin:9px 14px;border-radius:10px;overflow:hidden;
+    background:linear-gradient(180deg,rgba(0,0,0,.28),rgba(0,0,0,.12));border:1px solid var(--line-soft)}
+  .chordribbon .cr-strip{position:absolute;top:0;bottom:0;left:0;will-change:transform}
+  .chordribbon .cr-chord{position:absolute;top:7px;bottom:7px;display:flex;align-items:center;justify-content:center;
+    border-radius:8px;font-family:var(--mono);font-weight:700;font-size:18px;color:var(--muted);
+    background:rgba(var(--green-rgb),.05);border:1px solid var(--line);overflow:hidden;white-space:nowrap;transition:color .1s,background .1s,border-color .1s}
+  .chordribbon .cr-chord.cur{color:#04140b;background:var(--green);border-color:var(--green);box-shadow:0 0 18px -4px var(--green)}
+  .chordribbon .cr-chord.next{color:var(--text);border-color:var(--green-dim)}
+  .chordribbon .cr-line{position:absolute;top:0;bottom:0;width:2px;background:var(--green);z-index:3;box-shadow:0 0 10px 1px rgba(var(--green-rgb),.5)}
+  .chordribbon .cr-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11.5px;color:var(--muted-2)}
+
+  /* metronome + collapsible beat controls */
+  .metrogrp{display:flex;align-items:center;gap:6px}
+  .metrotog{width:26px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);display:grid;place-items:center;cursor:pointer;transition:.14s;flex:0 0 auto}
+  .metrotog:hover{color:var(--text)}
+  .metrotog svg{width:14px;height:14px;transition:transform .18s}
+  .metrogrp.collapsed .metrotog svg{transform:rotate(180deg)}
+  .metrogrp.collapsed .metroadj{display:none}
+
+  /* lyric bar (populated when lyrics are shown) */
+  .lyricbar{margin:8px 0 2px;min-height:38px;display:flex;align-items:center;gap:12px;padding:5px 12px;border-radius:9px;
+    background:linear-gradient(180deg,rgba(0,0,0,.22),rgba(0,0,0,.08));border:1px solid var(--line-soft);font-size:15px;color:var(--muted);overflow:hidden}
+  .lyricbar.expanded{align-items:flex-start;max-height:220px;overflow:auto;white-space:pre-wrap;line-height:1.7;padding:12px}
+  .lyrtoggle{display:flex;align-items:center;gap:8px;background:none;border:none;color:var(--aqua);font-size:13px;cursor:pointer;font-family:inherit;opacity:.9;transition:.14s}
+  .lyrtoggle:hover{opacity:1}
+  .lyrtoggle svg{width:16px;height:16px}
+  .lyrbody{display:flex;align-items:center;gap:16px;flex:1;min-width:0;overflow:hidden}
+  .lyrbody .lyr-song{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-2);flex:0 0 auto;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lyrbody .lyr-cur{color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lyrbody .lyr-next{color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+  .lyrmanual{display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap}
+  .lyrmanual .lyrm-label{font-size:12.5px;color:var(--muted-2)}
+  .lyrmanual input{background:var(--bg);border:1px solid var(--line);border-radius:7px;color:var(--text);font-size:13px;padding:5px 9px;font-family:inherit;min-width:120px}
+  .lyrmanual input:focus{outline:none;border-color:var(--green-dim)}
+  .lyrclose{margin-left:auto;width:24px;height:24px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--muted-2);cursor:pointer;font-size:11px;flex:0 0 auto}
+  .lyrclose:hover{color:var(--danger);border-color:var(--danger)}
+
+  /* ---- loop region on the scrub bar ---- */
+  .scrub .loopreg{position:absolute;top:0;bottom:0;background:rgba(var(--green-rgb),.22);border-left:2px solid var(--green);border-right:2px solid var(--green);border-radius:2px;display:none;pointer-events:none}
+  .tbtn.on{color:var(--green);background:rgba(var(--green-rgb),.12)}
+  .loopgrp{display:flex;align-items:center;gap:4px;margin-left:4px;padding-left:8px;border-left:1px solid var(--line-soft)}
+  .loopgrp .abtn{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--muted);background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:5px 8px;cursor:pointer;transition:.13s}
+  .loopgrp .abtn:hover{color:var(--text)}
+  .loopgrp .abtn.set{color:var(--green);border-color:var(--green-dim);background:rgba(var(--green-rgb),.1)}
+  .loopgrp .abtn i{font-style:normal;font-size:10px;opacity:.85;color:var(--muted-2)}
+  .loopgrp .abtn.set i{color:var(--green)}
+  .loopgrp .abclear{width:24px;height:28px;border-radius:7px;border:1px solid var(--line);background:var(--panel-2);color:var(--muted-2);cursor:pointer;font-size:11px;transition:.13s}
+  .loopgrp .abclear:hover{color:var(--danger);border-color:var(--danger)}
+  .loopgrp.flash #loopbtn{animation:loopflash .5s}
+  @keyframes loopflash{0%,100%{background:transparent}50%{background:rgba(var(--warn-rgb,217,153,34),.4)}}
+
+  /* ---- tap tempo + steady toggle in metro group ---- */
+  .adj button.tap{min-width:30px;font-size:10.5px;font-weight:600}
+  .adj button.tap.flash{color:var(--green)}
+  .metrobeta{font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);margin-left:5px;vertical-align:top}
+
   /* ---- pan knob (item 2) ---- */
   .pan{display:flex;flex-direction:column;align-items:center;gap:2px;width:54px;flex-shrink:0}
   .pan input[type=range]{width:50px;height:3px;accent-color:var(--aqua);cursor:pointer}
@@ -425,6 +635,15 @@
   .overview canvas{position:absolute;inset:0;width:100%;height:100%}
   .overview .ov-ph{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 6px var(--green);left:0;pointer-events:none;z-index:2}
   .overview .ov-win{position:absolute;top:0;bottom:0;background:rgba(255,255,255,.07);border-left:1px solid var(--green-dim);border-right:1px solid var(--green-dim);pointer-events:none;z-index:1;display:none}
+  /* A–B loop boundaries on the overview — bright yellow edges + wash between */
+  .overview .ov-loop{position:absolute;top:0;bottom:0;background:rgba(230,190,60,.16);border-left:3px solid #f2c94c;border-right:3px solid #f2c94c;pointer-events:none;z-index:3;display:none;box-shadow:inset 0 0 10px rgba(230,190,60,.2)}
+  /* little flag tabs at the top of each boundary so A and B are unmistakable */
+  .overview .ov-loop::before,.overview .ov-loop::after{content:"";position:absolute;top:0;width:7px;height:6px;background:#f2c94c}
+  .overview .ov-loop::before{left:-3px;border-bottom-right-radius:3px}
+  .overview .ov-loop::after{right:-3px;border-bottom-left-radius:3px}
+  /* individual A / B boundary lines (shown even when only one is set) */
+  .overview .ov-mark{position:absolute;top:0;bottom:0;width:2px;background:#f2c94c;pointer-events:none;z-index:3;display:none;box-shadow:0 0 6px rgba(242,201,76,.6)}
+  .overview .ov-mark::after{content:attr(data-lbl);position:absolute;top:0;left:2px;font:600 8px var(--mono);color:#0a0a0a;background:#f2c94c;padding:0 3px;border-radius:0 0 3px 0;line-height:1.4}
 </style>
 </head>
 <body>
@@ -446,10 +665,22 @@
 
     <div class="proj">
       <span class="dot"></span>
+      <img class="projthumb" id="projthumb" alt="" style="display:none">
       <div style="min-width:0">
         <div class="name" id="projname">Midnight Run — rough mix.wav</div>
         <div class="meta mono" id="projmeta">44.1 kHz · 24-bit · 03:18</div>
       </div>
+    </div>
+
+    <div class="topacts">
+      <button class="topact" id="vizbtn" title="Background visualizer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h3l2-7 4 14 3-9 2 5h4"/></svg>
+        <span>Visualizer</span>
+      </button>
+      <button class="topact" id="karbtn" title="Karaoke mode">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M6 11a6 6 0 0 0 12 0M12 18v3M8 21h8"/></svg>
+        <span>Karaoke</span>
+      </button>
     </div>
 
     <div class="spacer"></div>
@@ -511,6 +742,18 @@
 
     <!-- STAGE -->
     <div class="stage">
+      <div class="vizcoverbg" id="vizcoverbg"></div>
+      <canvas class="vizbg" id="vizbg"></canvas>
+      <div class="vizmenu" id="vizmenu">
+        <h4>Background · MilkDrop &amp; cover</h4>
+        <div class="vrow"><span>MilkDrop visualizer</span><div class="vsw" id="vizsw"></div></div>
+        <div class="vrow"><span>Preset</span>
+          <select id="viztype" style="max-width:130px"></select>
+        </div>
+        <div class="vrow"><span>Visualizer opacity</span><input type="range" id="vizop" min="10" max="100" value="55" style="width:120px"></div>
+        <div class="vrow"><span>Album cover background</span><div class="vsw" id="vizcover"></div></div>
+        <div class="vhint" id="vizhint"></div>
+      </div>
 
       <!-- ===== STUDIO ===== -->
       <section class="view show" id="v-studio">
@@ -527,7 +770,13 @@
               <span class="k">Chord now</span>
               <span class="chordv" id="chordnow">—</span>
             </div>
-            <div class="spacer" style="flex:1"></div>
+
+            <div class="chordribbon" id="chordribbon" title="Chords scroll under the line — play along">
+              <div class="cr-strip" id="crstrip"></div>
+              <div class="cr-line" id="crline"></div>
+              <div class="cr-empty" id="crempty">chord track appears after analysis</div>
+            </div>
+
             <div class="ctrls">
               <div class="adj" title="Pitch shift (semitones)">
                 <span>Pitch</span>
@@ -539,31 +788,63 @@
                 <button data-tempo="-1">−</button><b id="tempoval">— bpm</b><button data-tempo="1">+</button>
                 <button class="rst" data-tempo="reset" title="Reset tempo">⟲</button>
               </div>
-              <button class="pill" id="metro">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 21h12L14 4h-4L6 21z"/><path d="M9 14l6-4"/></svg>
-                Metronome
-              </button>
-              <div class="adj" id="metroadj" title="Shift the downbeat / change time signature">
-                <span>Beat 1</span>
-                <button data-db="-1" title="Shift downbeat earlier">◀</button>
-                <select id="meter" title="Beats per bar">
-                  <option value="3">3/4</option><option value="4" selected>4/4</option>
-                  <option value="5">5/4</option><option value="6">6/8</option><option value="7">7/8</option>
-                </select>
-                <select id="feel" title="Click feel — match the metronome to how fast the song feels">
-                  <option value="0.5">½× half-time</option>
-                  <option value="1" selected>1× normal</option>
-                  <option value="2">2× double-time</option>
-                </select>
-                <button data-db="1" title="Shift downbeat later">▶</button>
+              <div class="metrogrp" id="metrogrp">
+                <button class="pill" id="metro">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 21h12L14 4h-4L6 21z"/><path d="M9 14l6-4"/></svg>
+                  Metronome<span class="metrobeta">beta</span>
+                </button>
+                <button class="metrotog" id="metrotog" title="Show / hide beat controls" aria-label="Toggle beat controls">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg>
+                </button>
+                <div class="adj metroadj" id="metroadj" title="Beat controls">
+                  <span>Beat 1</span>
+                  <button data-db="-1" title="Shift downbeat earlier">◀</button>
+                  <select id="meter" title="Beats per bar">
+                    <option value="3">3/4</option><option value="4" selected>4/4</option>
+                    <option value="5">5/4</option><option value="6">6/8</option><option value="7">7/8</option>
+                  </select>
+                  <select id="feel" title="Click feel — match the metronome to how fast the song feels">
+                    <option value="0.5">½× half-time</option>
+                    <option value="1" selected>1× normal</option>
+                    <option value="2">2× double-time</option>
+                  </select>
+                  <button data-db="1" title="Shift downbeat later">▶</button>
+                  <select id="clicksrc" title="Beat source — Track rides the detected beats; Steady is a fixed tempo (no drift)">
+                    <option value="steady">Steady</option>
+                    <option value="track" selected>Track beats</option>
+                  </select>
+                  <button class="tap" id="taptempo" title="Tap 4+ times to set a steady tempo">Tap</button>
+                </div>
               </div>
             </div>
+          </div>
+
+          <div class="lyricbar" id="lyricbar">
+            <button class="lyrtoggle" id="lyrtoggle" title="Identify the song and show lyrics">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+              Show lyrics
+            </button>
+            <div class="lyrbody" id="lyrbody" style="display:none">
+              <span class="lyr-song" id="lyrsong"></span>
+              <span class="lyr-cur" id="lyrcur">♪</span>
+              <span class="lyr-next" id="lyrnext"></span>
+            </div>
+            <div class="lyrmanual" id="lyrmanual" style="display:none">
+              <span class="lyrm-label" id="lyrmlabel">Type the song to fetch lyrics:</span>
+              <input type="text" id="lyrtitle" placeholder="Title" autocomplete="off">
+              <input type="text" id="lyrartist" placeholder="Artist" autocomplete="off">
+              <button class="btn" id="lyrfetch">Fetch</button>
+            </div>
+            <button class="lyrclose" id="lyrclose" title="Hide lyrics" style="display:none">✕</button>
           </div>
 
           <div class="overview" id="overview" title="Click to seek · scroll to zoom waveforms">
             <canvas id="ovcanvas"></canvas>
             <div class="ov-ph" id="ovph"></div>
             <div class="ov-win" id="ovwin"></div>
+            <div class="ov-loop" id="ovloop"></div>
+            <div class="ov-mark" id="ovmarkA"></div>
+            <div class="ov-mark" id="ovmarkB"></div>
           </div>
 
           <div class="chan-head">
@@ -600,13 +881,19 @@
               <svg id="playicon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
             </button>
             <button class="tbtn" title="Forward 5s"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 5v14l9-7zM2 5v14l9-7z"/></svg></button>
-            <button class="tbtn" title="Loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></button>
+            <span class="loopgrp" id="loopgrp" title="Click A then B while playing to mark a section — playback then repeats between them">
+              <button class="tbtn" id="loopbtn" title="Toggle the A–B loop on/off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></button>
+              <button class="abtn" id="loopA" title="Set loop start at the playhead">A <i id="loopAt">·:··</i></button>
+              <button class="abtn" id="loopB" title="Set loop end at the playhead">B <i id="loopBt">·:··</i></button>
+              <button class="abclear" id="loopclear" title="Clear loop">✕</button>
+            </span>
           </div>
 
           <div class="time mono"><b id="tcur">00:42</b> <span>/ 03:18</span></div>
 
           <div class="scrub" id="scrub">
             <div class="buf"></div>
+            <div class="loopreg" id="loopreg"></div>
             <div class="fill" id="scrubfill"></div>
             <div class="knob" id="scrubknob"></div>
           </div>
@@ -630,7 +917,92 @@
         </div>
       </section>
 
-      <!-- ===== UPLOAD ===== -->
+      <!-- ===== TAB / MIDI MODAL ===== -->
+      <div class="tabmodal" id="tabmodal">
+        <div class="box">
+          <div class="hd">
+            <h3 id="tabtitle">Tab</h3><span class="tag">beta</span>
+            <button class="x" id="tabclose" title="Close">✕</button>
+          </div>
+          <div class="body-scroll">
+            <div class="status" id="tabstatus"><span class="spin"></span> Transcribing this stem to MIDI…</div>
+            <pre id="tabpre" style="display:none"></pre>
+          </div>
+          <div class="ft">
+            <span class="note">MIDI is the reliable export. ASCII tab is a beta practice aid — timing is approximate and polyphonic guitar is imperfect.</span>
+            <button class="btn primary" id="tabdlmidi" style="display:none">⬇ Download MIDI</button>
+            <button class="btn" id="tabdltab" style="display:none">Download tab (.txt)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== KARAOKE BATCH MODAL ===== -->
+      <div class="tabmodal" id="karmodal">
+        <div class="box" style="width:min(720px,94vw)">
+          <div class="hd">
+            <h3>Karaoke mode</h3><span class="tag">batch</span>
+            <button class="x" id="karclose" title="Close">✕</button>
+          </div>
+          <div class="body-scroll">
+            <p style="margin:0 0 12px;color:var(--muted);font-size:13px">Paste a YouTube playlist (or a single link). Stemmy downloads each track, removes the vocals, and gives you the instrumentals as a zip. Everything runs locally.</p>
+            <div class="ytinput" style="margin-bottom:12px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.6 7.2a2.8 2.8 0 0 0-2-2C17.9 4.8 12 4.8 12 4.8s-5.9 0-7.6.4a2.8 2.8 0 0 0-2 2A29 29 0 0 0 2 12a29 29 0 0 0 .4 4.8 2.8 2.8 0 0 0 2 2C6.1 19.2 12 19.2 12 19.2s5.9 0 7.6-.4a2.8 2.8 0 0 0 2-2A29 29 0 0 0 22 12a29 29 0 0 0-.4-4.8z"/><path d="m10 15 5-3-5-3z" fill="currentColor"/></svg>
+              <input type="text" id="karurl" placeholder="https://www.youtube.com/playlist?list=…" autocomplete="off" spellcheck="false">
+              <button class="btn primary" id="karstart">Start</button>
+            </div>
+            <div class="status" id="karstatus" style="display:none"></div>
+            <div class="karsaved" id="karsaved" style="display:none">
+              <div class="karsaved-h">Saved sessions <span>· pick up where you left off</span></div>
+              <div id="karsavedlist"></div>
+            </div>
+            <div class="karwarn" id="karwarn" style="display:none">⚠ <b>Song ID isn't installed</b> — karaoke lyrics need it. Run <code>get_lyrics.bat</code> once (see <b>BUILD.md</b>), then restart Stemmy. Without it, lyrics are looked up from the video title only, which often fails.</div>
+            <div class="karqhead" id="karqhead" style="display:none">Queue · what's coming up</div>
+            <div id="karlist" class="karlist"></div>
+            <audio id="karaudio" preload="auto"></audio>
+          </div>
+          <div class="ft">
+            <span class="note">Vocal removal uses the Quick depth (4-stem) split. Only download tracks you have the rights to.</span>
+            <button class="btn primary" id="karplay" style="display:none">▶ Open karaoke player</button>
+            <button class="btn" id="karretry" style="display:none" title="Re-run every track that errored — downloads can fail transiently (e.g. YouTube 403)">↻ Retry failed</button>
+            <button class="btn" id="kardl" style="display:none">Download all · zip</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== KARAOKE PERFORMANCE STAGE ===== -->
+      <div class="karstage" id="karstage">
+        <div class="ks-bg" id="ksBg"></div>
+        <div class="ks-cover" id="ksCover"></div>
+        <canvas class="ks-viz" id="ksViz"></canvas>
+        <button class="ks-close" id="ksClose" title="Exit player (Esc)">✕</button>
+        <button class="ks-settings" id="ksSettings" title="Player settings">⚙</button>
+        <div class="vizmenu ks-vizmenu" id="ksMenu">
+          <h4>Karaoke player</h4>
+          <div class="vrow"><span>Visualizer (MilkDrop)</span><div class="vsw" id="ksVizSw"></div></div>
+          <div class="vrow"><span>Preset</span><select id="ksPreset" style="max-width:130px"></select></div>
+          <div class="vrow"><span>Visualizer opacity</span><input type="range" id="ksVizOp" min="10" max="100" value="70" style="width:110px"></div>
+          <div class="vrow"><span>Background image</span><div class="vsw" id="ksCoverSw"></div></div>
+        </div>
+        <div class="ks-main">
+          <div class="ks-lyrics" id="ksLyrics">
+            <div class="ks-prev" id="ksPrev"></div>
+            <div class="ks-cur" id="ksCur">♪</div>
+            <div class="ks-next" id="ksNext"></div>
+          </div>
+        </div>
+        <div class="ks-bar">
+          <div class="ks-now"><span class="ks-lbl" id="ksState">Now playing</span><span class="ks-title" id="ksTitle">—</span></div>
+          <div class="ks-transport">
+            <button class="ks-tb" id="ksPrevBtn" title="Previous">⏮</button>
+            <button class="ks-tb ks-play" id="ksPlayBtn" title="Play / pause">▶</button>
+            <button class="ks-tb" id="ksNextBtn" title="Next">⏭</button>
+          </div>
+          <div class="ks-progress" id="ksProgress"><div class="ks-fill" id="ksFill"></div></div>
+          <div class="ks-time mono" id="ksTime">0:00</div>
+          <button class="ks-queue-toggle" id="ksQueueToggle" title="Show queue">☰ Queue</button>
+        </div>
+        <div class="ks-queue" id="ksQueue"></div>
+      </div>
       <section class="view" id="v-upload">
         <div class="centered">
           <div class="drop" id="dropzone">
@@ -674,7 +1046,7 @@
                 </ul>
                 <div class="mdl">mel-band roformer · ~1 pass</div>
               </div>
-              <div class="card" data-depth="standard">
+              <div class="card active" data-depth="standard">
                 <div class="cn"><b>Standard</b><span class="n">6 stems</span></div>
                 <ul>
                   <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Vocals · Bass · Drums</li>
@@ -684,7 +1056,7 @@
                 </ul>
                 <div class="mdl">+ htdemucs_6s · ~2 passes</div>
               </div>
-              <div class="card active" data-depth="deep">
+              <div class="card" data-depth="deep">
                 <div class="cn"><b>Deep</b><span class="n">up to 12</span></div>
                 <ul>
                   <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Vocals · Bass · Guitar · Piano · Other</li>
@@ -728,6 +1100,8 @@
   </div>
 </div>
 
+<script src="/static/vendor/butterchurn.min.js" onerror="window.__bcMissing=true"></script>
+<script src="/static/vendor/butterchurnPresets.min.js" onerror="window.__bcMissing=true"></script>
 <script>
 // Flask injects the real project here; stays null when the file is opened standalone.
 window.__PROJECT__ = window.__PROJECT__ || null; /*__PROJECT_INJECT__*/
@@ -923,6 +1297,7 @@ function channelRow(s, isSub, parentClr){
       <div class="acts">
         <button class="sm solo" data-solo="${s.id}">S</button>
         <button class="sm mute" data-mute="${s.id}">M</button>
+        <button class="sm tab" data-tab="${s.id}" title="Transcribe to MIDI + tab (beta)">MIDI</button>
         <button class="sm dl" data-dl="${s.id}" title="Download stem">${dlSvg()}</button>
       </div>
     </div>`;
@@ -1002,6 +1377,14 @@ wrap.addEventListener('click',e=>{
   if(mute){const id=mute.dataset.mute;muted.has(id)?muted.delete(id):muted.add(id);applyStates();}
   if(sel){sel.classList.toggle('on');updateSel();}
   if(tog){const ch=document.querySelector('.channel[data-id="'+tog.dataset.toggle+'"]');ch.classList.toggle('open');setTimeout(redraw,280);}
+  // click anywhere on a stem waveform to move the play cursor there (respects zoom window)
+  const wv=e.target.closest('.wave');
+  if(wv && !solo && !mute && !sel && !tog){
+    const r=wv.getBoundingClientRect();
+    const frac=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
+    const vs=(zoom>1?viewStart:0), vl=viewLen();
+    seek(vs+frac*vl);
+  }
 });
 function setPan(id,v){
   if(AUDIO && AUDIO.map[id] && AUDIO.map[id].pan) AUDIO.map[id].pan.pan.value=v/100;
@@ -1045,7 +1428,9 @@ function place(){const full=dur?(Math.min(t,dur)/dur*100):0;
   if(ovwin){ if(zoom>1){ ovwin.style.display='block'; ovwin.style.left=(viewStart/dur*100)+'%'; ovwin.style.width=(viewLen()/dur*100)+'%'; } else ovwin.style.display='none'; }
   const vs=zoom>1?viewStart:0, vl=viewLen();
   const win=vl?((t-vs)/vl*100):0;
-  document.querySelectorAll('.playhead').forEach(p=>p.style.left=Math.max(0,Math.min(100,win))+'%');}
+  document.querySelectorAll('.playhead').forEach(p=>p.style.left=Math.max(0,Math.min(100,win))+'%');
+  if(typeof updateChordRibbon==='function'){ try{ updateChordRibbon(); }catch(_){} }
+  if(typeof updateLyrics==='function'){ try{ updateLyrics(); }catch(_){} }}
 function setZoom(z){ zoom=Math.max(1,Math.min(100,z)); const vl=viewLen();
   viewStart=Math.max(0,Math.min(Math.max(0,dur-vl), t-vl/2)); redraw(); place(); }
 
@@ -1067,13 +1452,15 @@ async function setupAudio(){
   limiter.threshold.value=-1.0; limiter.knee.value=0; limiter.ratio.value=20;
   limiter.attack.value=0.003; limiter.release.value=0.25;
   master.connect(limiter); limiter.connect(ctx.destination);
+  let analyser=null;
+  try{ analyser=ctx.createAnalyser(); analyser.fftSize=512; analyser.smoothingTimeConstant=0.75; master.connect(analyser); }catch(_){}
   const map={};
   leafNodes.forEach(n=>{ const g=ctx.createGain();
     let pan=null;
     try{ pan=ctx.createStereoPanner(); g.connect(pan); pan.connect(master); }
     catch(_){ g.connect(master); }   // very old browsers: no panner
     map[n.id]={gain:g,pan:pan,leaf:n,buffer:null,orig:null,src:null}; });
-  const A={ctx,master,limiter,map,startTime:0,offset:0,playing:false,ready:false};
+  const A={ctx,master,limiter,analyser,map,startTime:0,offset:0,playing:false,ready:false};
   // decode every stem (parallel). Buffers, not <audio>, so they stay phase-locked.
   await Promise.all(leafNodes.map(async n=>{
     try{
@@ -1141,7 +1528,10 @@ function recomputeGains(){
   });
 }
 function rafLoop(){
-  if(AUDIO&&AUDIO.ready&&AUDIO.playing){ t=audioTime(); if(t>=dur){ togglePlay(false); t=dur; } }
+  if(AUDIO&&AUDIO.ready&&AUDIO.playing){ t=audioTime();
+    if(LOOP.on && LOOP.a!=null && LOOP.b!=null && LOOP.b>LOOP.a && t>=LOOP.b){ seek(LOOP.a); }
+    else if(t>=dur){ togglePlay(false); t=dur; }
+  }
   else if(!AUDIO){ t+=1/60; if(t>=dur)t=0; }
   if(zoom>1){ const vl=viewLen(); if(t<viewStart || t>viewStart+vl*0.98){ viewStart=Math.max(0,Math.min(Math.max(0,dur-vl), t-vl*0.1)); redraw(); } }
   const ch=document.getElementById('chordnow'); if(ch){ const c=currentChord(); if(ch.textContent!==c) ch.textContent=c; }
@@ -1170,13 +1560,23 @@ if(mvol) mvol.addEventListener('input',()=>{ if(AUDIO)AUDIO.master.gain.value=+m
 const metroBtn=document.getElementById('metro');
 function metroPresent(){ return leaves(STEMS,[]).some(n=>n.id==='metronome'); }
 if(metroBtn){
-  if(!metroPresent()){ metroBtn.style.display='none'; const ma=document.getElementById('metroadj'); if(ma) ma.style.display='none'; }
+  if(!metroPresent()){ const g=document.getElementById('metrogrp'); if(g) g.style.display='none'; }
   else muted.add('metronome');                          // tempo stem starts silent
   metroBtn.addEventListener('click',()=>{
     if(muted.has('metronome')) muted.delete('metronome'); else muted.add('metronome');
     applyStates();
   });
 }
+// collapsible beat controls (visible by default; state persists)
+(function(){
+  const grp=document.getElementById('metrogrp'), tog=document.getElementById('metrotog');
+  if(!grp||!tog) return;
+  try{ if(localStorage.getItem('stemmy.beatCollapsed')==='1') grp.classList.add('collapsed'); }catch(_){}
+  tog.addEventListener('click',()=>{
+    const c=grp.classList.toggle('collapsed');
+    try{ localStorage.setItem('stemmy.beatCollapsed', c?'1':'0'); }catch(_){}
+  });
+})();
 applyStates();
 
 // ---- metronome: generated client-side from the detected beats so the downbeat
@@ -1217,16 +1617,203 @@ function restartStem(id){
   const pos=audioTime(); try{ s.start(0, Math.max(0,Math.min(pos,o.buffer.duration-0.01))); }catch(_){ try{s.start();}catch(__){} }
   o.src=s;
 }
+let CLICK_SRC='track';                  // 'track' = detected beats (default), 'steady' = fixed grid
+let STEADY_BPM=0;                       // 0 = use detected tempo; tap tempo overrides
+function steadyBeats(){
+  const detected = (typeof BASE_BPM!=='undefined' && BASE_BPM>20) ? Math.round(BASE_BPM) : 120;
+  const bpm=Math.max(30,Math.min(300, STEADY_BPM || detected)), interval=60/bpm;
+  const dbs=(PROJECT&&PROJECT.analysis&&PROJECT.analysis.downbeats)||[];
+  let anchor = dbs.length?dbs[0] : (BEATS.length?BEATS[0]:0);
+  anchor = ((anchor % interval)+interval)%interval;   // fold near 0 so we cover from the top
+  const total = (ORIGDUR||dur||(BEATS.length?BEATS[BEATS.length-1]+interval:180));
+  const out=[]; for(let x=anchor; x<=total+1e-6; x+=interval) out.push(x);
+  return out;
+}
 function regenMetro(){
-  const A=AUDIO; if(!A||!A.map||!A.map['metronome']||!BEATS.length) return;
+  const A=AUDIO; if(!A||!A.map||!A.map['metronome']) return;
+  const base = (CLICK_SRC==='steady') ? steadyBeats() : BEATS;
+  if(!base.length) return;
   const scale=100/TEMPO;     // keep clicks aligned when tempo is changed
-  const b=genClickBuffer(A.ctx, feelBeats(BEATS,FEEL), dur, METER, DBOFFSET, scale);
+  const b=genClickBuffer(A.ctx, feelBeats(base,FEEL), dur, METER, DBOFFSET, scale);
   A.map['metronome'].buffer=b; PEAKS['metronome']=computePeaks(b,40000);
   redraw(); restartStem('metronome');
 }
 document.querySelectorAll('[data-db]').forEach(b=>b.addEventListener('click',()=>{ DBOFFSET+=(+b.dataset.db); regenMetro(); }));
 const meterSel=document.getElementById('meter'); if(meterSel) meterSel.addEventListener('change',()=>{ METER=+meterSel.value||4; regenMetro(); });
 const feelSel=document.getElementById('feel'); if(feelSel) feelSel.addEventListener('change',()=>{ FEEL=+feelSel.value||1; regenMetro(); });
+const clickSel=document.getElementById('clicksrc'); if(clickSel) clickSel.addEventListener('change',()=>{ CLICK_SRC=clickSel.value; regenMetro(); });
+// tap tempo — 4+ taps set a steady BPM and switch to Steady mode
+let TAPS=[];
+const tapBtn=document.getElementById('taptempo');
+if(tapBtn) tapBtn.addEventListener('click',()=>{
+  const now=performance.now();
+  if(TAPS.length && now-TAPS[TAPS.length-1]>2500) TAPS=[];   // long gap resets
+  TAPS.push(now); if(TAPS.length>8) TAPS.shift();
+  tapBtn.classList.add('flash'); setTimeout(()=>tapBtn.classList.remove('flash'),110);
+  if(TAPS.length>=2){
+    let sum=0; for(let i=1;i<TAPS.length;i++) sum+=TAPS[i]-TAPS[i-1];
+    const bpm=Math.round(60000/(sum/(TAPS.length-1)));
+    if(bpm>=30&&bpm<=300){ STEADY_BPM=bpm; CLICK_SRC='steady'; if(clickSel) clickSel.value='steady'; tapBtn.textContent=bpm; regenMetro(); }
+  }
+});
+
+// ---- scrolling chord ribbon (Chordify-style): chords move right→left under a
+//      fixed line; the current chord is highlighted, upcoming ones approach. ----
+let CHORD_SEGS=[];
+function crPxps(){ return 86; }         // px per original second
+function buildChordSegs(){
+  CHORD_SEGS=[];
+  if(CHORDS && CHORDS.length){
+    let i=0;
+    while(i<CHORDS.length){
+      let j=i; const lab=CHORDS[i][1];
+      while(j+1<CHORDS.length && CHORDS[j+1][1]===lab) j++;
+      const start=CHORDS[i][0];
+      const end=(j+1<CHORDS.length)?CHORDS[j+1][0]:((ORIGDUR||start+1));
+      CHORD_SEGS.push({start,end,label:lab});
+      i=j+1;
+    }
+  }
+  renderChordSegs();
+}
+function renderChordSegs(){
+  const strip=document.getElementById('crstrip'), e=document.getElementById('crempty');
+  if(!strip) return;
+  const pxps=crPxps();
+  const has=CHORD_SEGS.some(s=>s.label!=='—');
+  if(e) e.style.display = has?'none':'flex';
+  strip.innerHTML='';
+  CHORD_SEGS.forEach(s=>{
+    if(s.label==='—') return;
+    const el=document.createElement('div'); el.className='cr-chord';
+    el.style.left=(s.start*pxps)+'px';
+    el.style.width=Math.max(16,(s.end-s.start)*pxps-3)+'px';
+    el.textContent=s.label; el.dataset.s=s.start; el.dataset.e=s.end;
+    strip.appendChild(el);
+  });
+  updateChordRibbon();
+}
+function updateChordRibbon(){
+  const rib=document.getElementById('chordribbon'), strip=document.getElementById('crstrip'), line=document.getElementById('crline');
+  if(!rib||!strip) return;
+  const pxps=crPxps(), w=rib.clientWidth||600, headPx=w*0.17;
+  if(line) line.style.left=headPx+'px';
+  const ttOrig=t*(TEMPO/100);
+  strip.style.transform='translateX('+(headPx - ttOrig*pxps)+'px)';
+  let nextEl=null, bestNext=Infinity;
+  strip.querySelectorAll('.cr-chord').forEach(el=>{
+    const s=+el.dataset.s, e=+el.dataset.e; el.classList.remove('cur','next');
+    if(ttOrig>=s && ttOrig<e) el.classList.add('cur');
+    else if(s>ttOrig && s<bestNext){ bestNext=s; nextEl=el; }
+  });
+  if(nextEl) nextEl.classList.add('next');
+}
+
+// ---- lyrics (song ID via Shazam + synced lyrics via LRCLIB) ----
+let LYRICS=null;   // {synced:[[t,txt]], plain:''}
+const lyrToggle=document.getElementById('lyrtoggle'), lyrBody=document.getElementById('lyrbody'),
+      lyrManual=document.getElementById('lyrmanual'), lyrClose=document.getElementById('lyrclose'),
+      lyrSong=document.getElementById('lyrsong'), lyrCur=document.getElementById('lyrcur'),
+      lyrNext=document.getElementById('lyrnext'), lyrBar=document.getElementById('lyricbar'),
+      lyrMlabel=document.getElementById('lyrmlabel');
+function lyrShow(which){ // 'toggle' | 'body' | 'manual'
+  if(lyrToggle) lyrToggle.style.display = which==='toggle'?'flex':'none';
+  if(lyrBody) lyrBody.style.display = which==='body'?'flex':'none';
+  if(lyrManual) lyrManual.style.display = which==='manual'?'flex':'none';
+  if(lyrClose) lyrClose.style.display = which==='toggle'?'none':'inline-block';
+}
+function applyLyrics(j){
+  // Shazam renamed the project: reflect it in the topbar + recent sessions immediately
+  if(j && j.identified && j.song_name){
+    const pn=document.getElementById('projname'); if(pn) pn.textContent=j.song_name;
+    if(PROJECT) PROJECT.source_name=j.song_name;
+    const th=document.getElementById('projthumb');
+    if(th && j.cover){ th.src=j.cover+'?t='+Date.now(); th.style.display='block'; if(PROJECT) PROJECT.cover='cover.jpg'; }
+    if(typeof loadRecents==='function') try{ loadRecents(); }catch(_){}
+  }
+  LYRICS = (j && ((j.synced&&j.synced.length) || j.plain)) ? {synced:j.synced||[], plain:j.plain||''} : null;
+  if(!LYRICS){ if(lyrMlabel) lyrMlabel.textContent=(j&&j.message)||'No lyrics found — try the exact title/artist:'; lyrShow('manual'); return; }
+  const label=[j.artist,j.title].filter(Boolean).join(' — ');
+  if(LYRICS.synced.length){
+    lyrBar.classList.remove('expanded');
+    lyrBody.innerHTML='<span class="lyr-song" id="lyrsong"></span><span class="lyr-cur" id="lyrcur">♪</span><span class="lyr-next" id="lyrnext"></span>';
+    const ls=document.getElementById('lyrsong'); if(ls) ls.textContent=label;
+    lyrShow('body'); updateLyrics();
+  }else{
+    lyrBar.classList.add('expanded');
+    lyrBody.innerHTML='<span class="lyr-song">'+label+' · unsynced</span><div style="white-space:pre-wrap">'+LYRICS.plain.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))+'</div>';
+    lyrShow('body');
+  }
+}
+async function fetchLyrics(body){
+  if(lyrMlabel) lyrMlabel.textContent='Looking up lyrics…';
+  try{
+    const r=await fetch('/api/identify/'+STATE.pid,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
+    const j=await r.json();
+    if(j.error==='no_shazam'||j.error==='no_match'){ if(lyrMlabel) lyrMlabel.textContent=j.message; lyrShow('manual'); return; }
+    applyLyrics(j);
+  }catch(err){ if(lyrMlabel) lyrMlabel.textContent='Lyrics error: '+err.message; lyrShow('manual'); }
+}
+if(lyrToggle) lyrToggle.addEventListener('click',()=>{ lyrShow('body'); const c=document.getElementById('lyrcur'); if(c) c.textContent='identifying…'; fetchLyrics({}); });
+if(lyrClose) lyrClose.addEventListener('click',()=>{ lyrShow('toggle'); lyrBar.classList.remove('expanded'); LYRICS=null; lyrBody.innerHTML='<span class="lyr-song" id="lyrsong"></span><span class="lyr-cur" id="lyrcur">♪</span><span class="lyr-next" id="lyrnext"></span>'; });
+const lyrFetch=document.getElementById('lyrfetch');
+if(lyrFetch) lyrFetch.addEventListener('click',()=>{
+  const ti=document.getElementById('lyrtitle').value.trim(), ar=document.getElementById('lyrartist').value.trim();
+  if(!ti){ if(lyrMlabel) lyrMlabel.textContent='Enter at least a title.'; return; }
+  fetchLyrics({title:ti, artist:ar});
+});
+function updateLyrics(){
+  if(!LYRICS || !LYRICS.synced || !LYRICS.synced.length) return;
+  const cur=t*(TEMPO/100); const S=LYRICS.synced;
+  let idx=-1; for(let i=0;i<S.length;i++){ if(S[i][0]<=cur+0.15) idx=i; else break; }
+  const ce=document.getElementById('lyrcur'), ne=document.getElementById('lyrnext');
+  if(ce) ce.textContent=(idx>=0?S[idx][1]:'')||'♪';
+  if(ne) ne.textContent=(idx+1<S.length?S[idx+1][1]:'')||'';
+}
+
+// ---- loop A–B sections ----
+const LOOP={a:null,b:null,on:false};
+const loopBtn=document.getElementById('loopbtn'), loopAEl=document.getElementById('loopA'),
+      loopBEl=document.getElementById('loopB'), loopReg=document.getElementById('loopreg'),
+      loopAt=document.getElementById('loopAt'), loopBt=document.getElementById('loopBt'),
+      loopClear=document.getElementById('loopclear'), loopGrp=document.getElementById('loopgrp');
+function fmtT(s){ if(s==null||isNaN(s)) return '·:··'; s=Math.max(0,s); const m=Math.floor(s/60), ss=Math.floor(s%60); return m+':'+(ss<10?'0':'')+ss; }
+function updateLoopUI(){
+  if(loopAEl) loopAEl.classList.toggle('set', LOOP.a!=null);
+  if(loopBEl) loopBEl.classList.toggle('set', LOOP.b!=null);
+  if(loopAt) loopAt.textContent=fmtT(LOOP.a);
+  if(loopBt) loopBt.textContent=fmtT(LOOP.b);
+  if(loopBtn) loopBtn.classList.toggle('on', LOOP.on);
+  const show=(LOOP.a!=null && LOOP.b!=null && LOOP.b>LOOP.a && dur);
+  if(loopReg){
+    if(show){
+      loopReg.style.display='block';
+      loopReg.style.left=(LOOP.a/dur*100)+'%';
+      loopReg.style.width=((LOOP.b-LOOP.a)/dur*100)+'%';
+    } else loopReg.style.display='none';
+  }
+  // mirror the loop boundaries on the overview strip (yellow markers)
+  const ovl=document.getElementById('ovloop');
+  if(ovl){
+    if(show){
+      ovl.style.display='block';
+      ovl.style.left=(LOOP.a/dur*100)+'%';
+      ovl.style.width=((LOOP.b-LOOP.a)/dur*100)+'%';
+    } else ovl.style.display='none';
+  }
+  // individual A / B boundary lines — visible even when only one end is set
+  const mA=document.getElementById('ovmarkA'), mB=document.getElementById('ovmarkB');
+  if(mA){ if(LOOP.a!=null && dur && !show){ mA.style.display='block'; mA.style.left=(LOOP.a/dur*100)+'%'; mA.setAttribute('data-lbl','A'); } else mA.style.display='none'; }
+  if(mB){ if(LOOP.b!=null && dur && !show){ mB.style.display='block'; mB.style.left=(LOOP.b/dur*100)+'%'; mB.setAttribute('data-lbl','B'); } else mB.style.display='none'; }
+}
+function loopAutoEnable(){ if(LOOP.a!=null && LOOP.b!=null && LOOP.b>LOOP.a) LOOP.on=true; }
+if(loopAEl) loopAEl.addEventListener('click',()=>{ LOOP.a=t; if(LOOP.b!=null&&LOOP.a>=LOOP.b) LOOP.b=null; loopAutoEnable(); updateLoopUI(); });
+if(loopBEl) loopBEl.addEventListener('click',()=>{ LOOP.b=t; if(LOOP.a!=null&&LOOP.b<=LOOP.a) LOOP.a=null; loopAutoEnable(); updateLoopUI(); });
+if(loopClear) loopClear.addEventListener('click',()=>{ LOOP.a=LOOP.b=null; LOOP.on=false; updateLoopUI(); });
+if(loopBtn) loopBtn.addEventListener('click',()=>{
+  if(LOOP.a==null||LOOP.b==null){ if(loopGrp){ loopGrp.classList.add('flash'); setTimeout(()=>loopGrp.classList.remove('flash'),500); } return; }
+  LOOP.on=!LOOP.on; if(LOOP.on) seek(LOOP.a); updateLoopUI();
+});
 
 // zoom slider — scales the visible waveform window
 const zoomEl=document.getElementById('zoom'), zoomVal=document.getElementById('zoomval');
@@ -1247,7 +1834,7 @@ if(ovEl){
 
 // ---- boot the engine for a real project ----
 if(REAL){
-  setupAudio().then(a=>{ AUDIO=a; ORIGDUR=dur; recomputeGains(); regenMetro(); place(); applySort(); setTimeout(detectChords,40); }).catch(e=>console.warn('audio init',e));
+  setupAudio().then(a=>{ AUDIO=a; ORIGDUR=dur; recomputeGains(); regenMetro(); place(); applySort(); if(typeof updateLoopUI==='function') updateLoopUI(); setTimeout(()=>{ detectChords(); if(typeof buildChordSegs==='function') buildChordSegs(); },40); }).catch(e=>console.warn('audio init',e));
 }
 place();
 
@@ -1353,6 +1940,36 @@ function goertzel(buf, start, N, f, sr){
   for(let i=0;i<N;i++){ const s0=buf[start+i]+k*s1-s2; s2=s1; s1=s0; }
   return s1*s1+s2*s2-k*s1*s2;
 }
+// Core chord estimator over a mono mix — reused by the studio and the karaoke stage.
+function chordsFromMix(mix, sr, bpm){
+  const N=mix.length;
+  const beatLen=Math.max(0.35,Math.min(2.0, 60/(bpm||120)));
+  const frame=Math.floor(sr*beatLen), hop=frame;
+  const freqs=[]; for(let m=36;m<=83;m++) freqs.push([m%12, 440*Math.pow(2,(m-69)/12)]);
+  const maj=[0,4,7], min=[0,3,7];
+  const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  const out=[];
+  for(let s=0;s+frame<=N;s+=hop){
+    const chroma=new Float32Array(12); let energy=0;
+    for(let j=0;j<freqs.length;j++){ const p=goertzel(mix,s,frame,freqs[j][1],sr); chroma[freqs[j][0]]+=p; energy+=p; }
+    let label='—';
+    if(energy>1e-3){
+      let best=0,bestScore=-Infinity,bestMin=false;
+      for(let root=0;root<12;root++){
+        let sc=0; for(const iv of maj) sc+=chroma[(root+iv)%12];
+        let scm=0; for(const iv of min) scm+=chroma[(root+iv)%12];
+        if(sc>bestScore){bestScore=sc;best=root;bestMin=false;}
+        if(scm>bestScore){bestScore=scm;best=root;bestMin=true;}
+      }
+      label=names[best]+(bestMin?'m':'');
+    }
+    out.push([s/sr, label]);
+  }
+  for(let i=1;i<out.length-1;i++){
+    if(out[i][1]!==out[i-1][1] && out[i-1][1]===out[i+1][1]) out[i][1]=out[i-1][1];
+  }
+  return out;
+}
 function detectChords(){
   try{
     if(!AUDIO) return;
@@ -1362,35 +1979,8 @@ function detectChords(){
     let N=0; entries.forEach(o=>{ N=Math.max(N,o.orig.length); });
     const mix=new Float32Array(N);
     entries.forEach(o=>{ const d=o.orig.getChannelData(0); for(let i=0;i<d.length;i++) mix[i]+=d[i]; });
-    // analyse one beat at a time so the chord can't change faster than the
-    // tempo (item 2). At slow/fast tempos this scales with BASE_BPM.
-    const beatLen=Math.max(0.35,Math.min(2.0, 60/(BASE_BPM||120)));
-    const frame=Math.floor(sr*beatLen), hop=frame;
-    const freqs=[]; for(let m=36;m<=83;m++) freqs.push([m%12, 440*Math.pow(2,(m-69)/12)]);
-    const maj=[0,4,7], min=[0,3,7];
-    const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-    ORIGDUR = N/sr; CHORDS=[];
-    for(let s=0;s+frame<=N;s+=hop){
-      const chroma=new Float32Array(12); let energy=0;
-      for(let j=0;j<freqs.length;j++){ const p=goertzel(mix,s,frame,freqs[j][1],sr); chroma[freqs[j][0]]+=p; energy+=p; }
-      let label='—';
-      if(energy>1e-3){
-        let best=0,bestScore=-Infinity,bestMin=false;
-        for(let root=0;root<12;root++){
-          let sc=0; for(const iv of maj) sc+=chroma[(root+iv)%12];
-          let scm=0; for(const iv of min) scm+=chroma[(root+iv)%12];
-          if(sc>bestScore){bestScore=sc;best=root;bestMin=false;}
-          if(scm>bestScore){bestScore=scm;best=root;bestMin=true;}
-        }
-        label=names[best]+(bestMin?'m':'');
-      }
-      CHORDS.push([s/sr, label]);
-    }
-    // de-blip: drop a lone one-beat chord wedged between two equal neighbours
-    for(let i=1;i<CHORDS.length-1;i++){
-      if(CHORDS[i][1]!==CHORDS[i-1][1] && CHORDS[i-1][1]===CHORDS[i+1][1])
-        CHORDS[i][1]=CHORDS[i-1][1];
-    }
+    ORIGDUR = N/sr;
+    CHORDS = chordsFromMix(mix, sr, BASE_BPM);
   }catch(e){ console.warn('chord detect',e); }
 }
 function currentChord(){
@@ -1412,13 +2002,19 @@ function loadRecents(){
     host.innerHTML='';
     list.slice(0,12).forEach(p=>{
       const el=document.createElement('button'); el.className='rec';
-      const meta=[p.depth, (p.stems?p.stems+' stems':'')].filter(Boolean).join(' · ');
+      const done=(p.stems&&p.stems>0);
+      const bits=[];
+      if(done) bits.push((p.depth?p.depth+' · ':'')+p.stems+' stems');
+      else bits.push('unfinished'+(p.depth?' · '+p.depth:''));
+      if(p.created) bits.push(p.created);
+      const meta=bits.filter(Boolean).join(' · ');
       const lead = p.cover
         ? '<span class="rthumb"><img src="'+p.cover+'" alt="" loading="lazy" onerror="this.remove()"></span>'
         : '<span class="rdot"></span>';
       el.innerHTML=lead+'<span class="rtxt"><span class="rn"></span><span class="rm"></span></span>';
       el.querySelector('.rn').textContent=p.name||'project';
       el.querySelector('.rm').textContent=meta||(p.status||'');
+      if(!done) el.title='Session not finished — reopens at the separation step so you can restart it';
       if(REAL && PROJECT && p.id===PROJECT.id) el.style.background='var(--panel-2)';
       el.addEventListener('click',()=>{ window.location='/studio/'+p.id; });
       host.appendChild(el);
@@ -1510,12 +2106,21 @@ try{ applyTheme(localStorage.getItem('stemmy-theme')||'green'); }catch(_){ apply
 //  APP FLOW  — upload, separate (SSE), studio, downloads
 //  (active when Flask is serving; standalone file stays a design preview)
 // ===================================================================
-const STATE = { pid: (REAL && PROJECT) ? PROJECT.id : null, depth: 'deep' };
+const STATE = { pid: (REAL && PROJECT) ? PROJECT.id : null, depth: 'standard' };
 
 function showView(name){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('show'));
   const v=document.getElementById('v-'+name); if(v) v.classList.add('show');
-  if(name==='studio') setTimeout(redraw,60);
+  // the ambient background visualizer only belongs to the studio — keep it off
+  // the upload / depth / processing screens entirely (issue 3)
+  const stage=document.querySelector('.stage');
+  const inStudio=(name==='studio');
+  if(stage) stage.classList.toggle('viz-scope', inStudio);
+  const vbtn=document.getElementById('vizbtn');
+  if(vbtn) vbtn.style.display=inStudio?'':'none';
+  const vmenu=document.getElementById('vizmenu');
+  if(!inStudio && vmenu) vmenu.classList.remove('show');
+  if(name==='studio'){ setTimeout(redraw,60); setTimeout(()=>{ if(window.vizStudioResize) window.vizStudioResize(); },80); }
 }
 // workflow rail: light up steps up to the current one
 const STEP_ORDER=['upload','depth','processing','studio'];
@@ -1557,6 +2162,8 @@ if(!DESIGN){
       note.style.opacity='.85';
       note.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>MSST installed · ready';
     }
+    if(cap && !cap.tabs){ document.querySelectorAll('[data-tab]').forEach(b=>b.style.display='none'); }
+    if(cap && !cap.identify){ const w=document.getElementById('karwarn'); if(w) w.style.display='block'; }
   }).catch(()=>{});
 }
 
@@ -1609,6 +2216,471 @@ async function doYoutube(url){
   }catch(err){ uploadMsg.textContent='YouTube error: '+err.message; if(help) help.classList.add('show'); }
   finally{ if(ytBtn){ ytBtn.disabled=false; ytBtn.textContent='Fetch audio'; } }
 }
+
+// ---- karaoke playlist batch ----
+const karModal=document.getElementById('karmodal');
+const karOpen=document.getElementById('karbtn'), karClose=document.getElementById('karclose');
+const karUrl=document.getElementById('karurl'), karStart=document.getElementById('karstart');
+const karList=document.getElementById('karlist'), karStatus=document.getElementById('karstatus'), karDl=document.getElementById('kardl');
+let KAR_JOB=null, KAR_ES=null;
+function karShow(){ if(karModal) karModal.classList.add('show'); const qh=document.getElementById('karqhead'); if(qh) qh.style.display=(karList&&karList.children.length)?'block':'none'; karLoadSaved(); }
+function karHide(){ if(karModal){ karModal.classList.remove('show'); } }
+if(karOpen) karOpen.addEventListener('click',karShow);
+if(karClose) karClose.addEventListener('click',karHide);
+if(karModal) karModal.addEventListener('click',e=>{ if(e.target===karModal) karHide(); });
+
+// ---- restore saved batches (survive a server restart) ----
+function karLoadSaved(){
+  const wrap=document.getElementById('karsaved'), host=document.getElementById('karsavedlist');
+  if(!wrap||!host) return;
+  fetch('/api/karaoke/saved').then(r=>r.json()).then(list=>{
+    if(!Array.isArray(list)||!list.length){ wrap.style.display='none'; host.innerHTML=''; return; }
+    wrap.style.display='block'; host.innerHTML='';
+    list.forEach(j=>{
+      const row=document.createElement('div'); row.className='krow';
+      const playable=(typeof j.playable==='number')?j.playable:j.done;
+      const readyTxt = (playable<j.total && playable<j.done)
+        ? playable+'/'+j.total+' playable'
+        : (j.done||0)+'/'+(j.total||0)+' ready';
+      const sub=[readyTxt, j.depth||'', j.created||''].filter(Boolean).join(' · ');
+      row.innerHTML='<div class="kmeta"><div class="kname"></div><div class="ksub"></div></div>'
+        +'<button class="kopen">Open</button><button class="kdel" title="Forget this session">✕</button>';
+      row.querySelector('.kname').textContent=j.name||'batch';
+      row.querySelector('.ksub').textContent=sub;
+      const open=row.querySelector('.kopen');
+      if(!(playable>0)){ open.disabled=true; open.textContent='No tracks'; }
+      else open.addEventListener('click',()=>karRestore(j.id));
+      row.querySelector('.kdel').addEventListener('click',()=>{
+        fetch('/api/karaoke/'+j.id+'/delete',{method:'POST'}).then(()=>karLoadSaved()).catch(()=>{});
+      });
+      host.appendChild(row);
+    });
+  }).catch(()=>{ wrap.style.display='none'; });
+}
+async function karRestore(jobId){
+  try{
+    const r=await fetch('/api/karaoke/'+jobId); const j=await r.json();
+    if(!r.ok||!j||!j.items){ karStatus.style.display='flex'; karStatus.textContent='Could not open that session.'; return; }
+    KAR_JOB=j.id;
+    // a track counts as "done" for playback only if its file is actually on disk
+    const items=j.items.map(it=>Object.assign({}, it,
+      { status: (it.status==='done' && it.playable===false) ? 'missing' : it.status }));
+    karRender(items);
+    items.forEach(it=>{ karUpdate(it.n, it.status, it.error, it.pid);
+      if(it.title){ const t=karList.querySelector('.kit[data-n="'+it.n+'"] .kt'); if(t) t.textContent=it.title; } });
+    const playable=items.filter(it=>it.status==='done').length;
+    const missing=items.filter(it=>it.status==='missing').length;
+    karStatus.style.display='flex';
+    karStatus.innerHTML='✓ Restored “'+(j.name||'batch')+'” — '+playable+' of '+items.length+' tracks ready'
+      + (missing? ' ('+missing+' missing on disk)':'') + '.';
+    if(playable>0){ karDl.style.display='inline-flex'; karDl.onclick=()=>{ window.location='/api/karaoke/'+KAR_JOB+'/download'; }; karRevealPlay(); }
+    else { if(karPlayAll) karPlayAll.style.display='none'; }
+    karSyncRetryBtn();
+  }catch(err){ karStatus.style.display='flex'; karStatus.textContent='⚠ '+err.message; }
+}
+function karRender(items){
+  if(!karList) return;
+  karList.innerHTML='';
+  items.forEach(it=>{
+    const row=document.createElement('div'); row.className='kit '+(it.status||'queued'); row.dataset.n=it.n;
+    if(it.pid) row.dataset.pid=it.pid;
+    row.innerHTML='<span class="kn">'+(it.n+1)+'</span><span class="kt">'+(it.title||'track')+'</span><span class="ks '+(it.status||'queued')+'">'+(it.status||'queued')+'</span>';
+    karList.appendChild(row);
+  });
+  const qh=document.getElementById('karqhead'); if(qh) qh.style.display=items.length?'block':'none';
+}
+function karUpdate(n,status,error,pid){
+  const row=karList&&karList.querySelector('.kit[data-n="'+n+'"]'); if(!row) return;
+  row.className='kit '+status;
+  if(pid) row.dataset.pid=pid;
+  const ks=row.querySelector('.ks'); if(ks){ ks.className='ks '+status; ks.textContent=(status==='error'&&error)?'error':status; if(error) ks.title=error; }
+}
+// how many rows are currently failed (error / interrupted / missing-with-url)?
+function karFailedCount(){
+  return karList ? karList.querySelectorAll('.kit.error, .kit.interrupted').length : 0;
+}
+const karRetryBtn=document.getElementById('karretry');
+function karSyncRetryBtn(){
+  if(!karRetryBtn) return;
+  karRetryBtn.style.display = (KAR_JOB && karFailedCount()>0) ? 'inline-flex' : 'none';
+}
+// attach to a job's SSE stream — shared by fresh runs and retries
+function karAttach(jobId){
+  if(KAR_ES){ try{ KAR_ES.close(); }catch(_){ } KAR_ES=null; }
+  KAR_ES=new EventSource('/api/karaoke/'+jobId+'/events');
+  KAR_ES.onmessage=ev=>{
+    let d; try{ d=JSON.parse(ev.data); }catch(_){ return; }
+    if(d.type==='init'){
+      if(d.items) d.items.forEach(it=>{ karUpdate(it.n,it.status,it.error,it.pid);
+        if(it.title){ const row=karList.querySelector('.kit[data-n="'+it.n+'"] .kt'); if(row) row.textContent=it.title; }
+        if(it.status==='done') karRevealPlay(); });
+    }
+    else if(d.type==='item'){ karUpdate(d.n,d.status,d.error,d.pid); if(d.title){ const row=karList.querySelector('.kit[data-n="'+d.n+'"] .kt'); if(row&&d.title) row.textContent=d.title; } if(d.status==='done') karRevealPlay(); }
+    else if(d.type==='done'){
+      const failed=d.total-d.completed;
+      let msg='✓ Done — '+d.completed+' of '+d.total+' tracks ready'+(failed?' · '+failed+' failed':'')+'.';
+      // if any failure was a YouTube 403, point the user at the fix
+      const blocked = failed>0 && !!(karList && [...karList.querySelectorAll('.kit.error .ks')].some(e=>/403|blocked/i.test(e.title||'')));
+      if(blocked) msg+=' Some downloads were blocked by YouTube (403) — run <b>update_ytdlp.bat</b>, then <b>Retry failed</b>.';
+      karStatus.innerHTML=msg;
+      karStart.disabled=false; karStart.textContent='Start';
+      if(d.completed>0){ karDl.style.display='inline-flex'; karDl.onclick=()=>{ window.location='/api/karaoke/'+KAR_JOB+'/download'; }; karRevealPlay(); }
+      karSyncRetryBtn();
+      if(KAR_ES){ KAR_ES.close(); KAR_ES=null; }
+    }
+  };
+  KAR_ES.onerror=()=>{ /* keep the list; SSE may drop after done */ };
+}
+async function karBegin(){
+  const url=(karUrl&&karUrl.value||'').trim();
+  if(!url){ karStatus.style.display='flex'; karStatus.textContent='Paste a playlist or video link first.'; return; }
+  karStart.disabled=true; karStart.textContent='Reading…'; karDl.style.display='none';
+  if(karRetryBtn) karRetryBtn.style.display='none';
+  karStatus.style.display='flex'; karStatus.innerHTML='<span class="spin"></span> Reading the playlist…';
+  karList.innerHTML='';
+  try{
+    const r=await fetch('/api/karaoke',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+    const j=await r.json();
+    if(!r.ok){ karStatus.textContent='⚠ '+(j.error||('failed ('+r.status+')')); karStart.disabled=false; karStart.textContent='Start'; return; }
+    KAR_JOB=j.id; karRender(j.items);
+    karStatus.innerHTML='<span class="spin"></span> Processing '+j.items.length+' tracks — downloading, removing vocals…';
+    karStart.textContent='Running…';
+    karAttach(j.id);
+  }catch(err){ karStatus.textContent='⚠ '+err.message; karStart.disabled=false; karStart.textContent='Start'; }
+}
+async function karRetry(){
+  if(!KAR_JOB) return;
+  if(karRetryBtn){ karRetryBtn.disabled=true; karRetryBtn.textContent='↻ Retrying…'; }
+  try{
+    const r=await fetch('/api/karaoke/'+KAR_JOB+'/retry',{method:'POST'});
+    const j=await r.json();
+    if(!r.ok){ karStatus.style.display='flex'; karStatus.textContent='⚠ '+(j.error||'retry failed'); return; }
+    karStatus.style.display='flex';
+    karStatus.innerHTML='<span class="spin"></span> Retrying failed tracks…';
+    // reflect the re-queued statuses immediately, then follow the stream
+    j.items.forEach(it=>karUpdate(it.n,it.status,it.error,it.pid));
+    karAttach(KAR_JOB);
+  }catch(err){ karStatus.style.display='flex'; karStatus.textContent='⚠ '+err.message; }
+  finally{ if(karRetryBtn){ karRetryBtn.disabled=false; karRetryBtn.textContent='↻ Retry failed'; karRetryBtn.style.display='none'; } }
+}
+if(karRetryBtn) karRetryBtn.addEventListener('click',karRetry);
+if(karStart) karStart.addEventListener('click',karBegin);
+if(karUrl) karUrl.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); karBegin(); } });
+
+// ---- karaoke performance stage (big player: lyrics + chords + queue) ----
+const karAudio=document.getElementById('karaudio'), karPlayAll=document.getElementById('karplay');
+const ksStage=document.getElementById('karstage');
+const ksBg=document.getElementById('ksBg'), ksCover=document.getElementById('ksCover'), ksTitle=document.getElementById('ksTitle'), ksState=document.getElementById('ksState');
+const ksCur=document.getElementById('ksCur'), ksPrev=document.getElementById('ksPrev'), ksNext=document.getElementById('ksNext');
+const ksFill=document.getElementById('ksFill'), ksTimeEl=document.getElementById('ksTime'), ksPlayBtn=document.getElementById('ksPlayBtn');
+const ksQueue=document.getElementById('ksQueue');
+let KAR_QUEUE=[], KAR_POS=-1, KAR_LYRICS=null, ksRaf=0, KAR_SEQ=0;
+// Both layers ALWAYS start off — only preset/opacity preferences persist.
+let KS_SETTINGS={viz:false,preset:'',vizOp:0.7,cover:false};
+try{ const s=JSON.parse(localStorage.getItem('stemmy.ksviz')||'{}');
+  if(s.preset) KS_SETTINGS.preset=s.preset;
+  if(typeof s.vizOp==='number') KS_SETTINGS.vizOp=s.vizOp; }catch(_){}
+function karDoneTracks(){
+  return [...karList.querySelectorAll('.kit.done')].map(r=>({
+    n:+r.dataset.n, pid:r.dataset.pid||null,
+    title:((r.querySelector('.kt')||{}).textContent||('Track '+(+r.dataset.n+1))).trim() }));
+}
+function karRevealPlay(){ if(karPlayAll && karDoneTracks().length) karPlayAll.style.display='inline-flex'; }
+
+function ksRenderQueue(){
+  if(!ksQueue) return;
+  ksQueue.innerHTML='';
+  const head=document.createElement('div'); head.className='ks-qhead';
+  head.innerHTML='<button class="ks-qx" id="ksQueueClose" title="Close queue" aria-label="Close queue">✕</button><span class="ks-qh">Up next</span>';
+  ksQueue.appendChild(head);
+  head.querySelector('#ksQueueClose').addEventListener('click',()=>{ ksQueue.classList.remove('open'); });
+  KAR_QUEUE.forEach((it,i)=>{
+    const row=document.createElement('div'); row.className='ks-qrow'+(i===KAR_POS?' playing':'');
+    row.innerHTML='<span class="qn">'+(i+1)+'</span><span class="qt">'+it.title+'</span>'+(i===KAR_POS?'<span class="qbadge">now</span>':(i===KAR_POS+1?'<span class="qbadge">next</span>':''));
+    row.addEventListener('click',()=>{ ksLoad(i,true); });
+    ksQueue.appendChild(row);
+  });
+}
+async function ksFetchLyrics(pid, title, seq){
+  try{
+    let j=null, fromStudioFallback=false;
+    if(pid){ const r=await fetch('/api/lyrics/'+pid); j=await r.json(); }
+    if((!j || !(j.synced&&j.synced.length) && !j.plain) && STATE.pid){
+      // fallback: live lookup by title through the identify endpoint.
+      // NOTE: this call is keyed to the STUDIO project (STATE.pid), so any cover
+      // it returns belongs to the stem-section song, NOT this karaoke track.
+      const r2=await fetch('/api/identify/'+STATE.pid,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title})});
+      j=await r2.json();
+      fromStudioFallback=true;
+    }
+    if(seq!==KAR_SEQ) return;
+    if(j && j.synced && j.synced.length) KAR_LYRICS={synced:j.synced};
+    else if(j && j.plain) KAR_LYRICS={plain:j.plain};
+    else { KAR_LYRICS=null; ksCur.textContent='(no lyrics found for this track)'; }
+    // A lyric-lookup cover is only trusted when the track has NO project of its
+    // own (pid-less) AND the data didn't come from the studio-project fallback —
+    // the karaoke backdrop must always be this track's art, never the stem
+    // section's song.
+    if(j && j.cover && !pid && !fromStudioFallback && !KS_TRACK_COVER){ KS_TRACK_COVER=j.cover; ksApplyCover(); }
+  }catch(_){ if(seq===KAR_SEQ) KAR_LYRICS=null; }
+}
+// album-cover backdrop for the karaoke stage — independent of the visualizer
+let KS_TRACK_COVER='';
+function ksApplyCover(){
+  if(!ksCover) return;
+  if(KS_SETTINGS.cover && KS_TRACK_COVER){
+    ksCover.style.backgroundImage='url('+KS_TRACK_COVER+')';
+    ksCover.classList.add('on');
+  } else {
+    ksCover.classList.remove('on');
+  }
+}
+function ksUpdateLyrics(cur){
+  if(!KAR_LYRICS){ ksCur.textContent='♪'; ksPrev.textContent=''; ksNext.textContent=''; return; }
+  if(KAR_LYRICS.synced){
+    const S=KAR_LYRICS.synced; let idx=-1;
+    for(let i=0;i<S.length;i++){ if(S[i][0]<=cur+0.15) idx=i; else break; }
+    ksPrev.textContent = idx>0? S[idx-1][1]:'';
+    ksCur.textContent  = (idx>=0? S[idx][1]:'')||'♪';
+    ksNext.textContent = idx+1<S.length? S[idx+1][1]:'';
+  }else if(KAR_LYRICS.plain){ ksCur.textContent=''; ksPrev.textContent=''; ksNext.textContent=''; }
+}
+function ksTick(){
+  if(!ksStage.classList.contains('show')){ ksRaf=0; return; }
+  const cur=karAudio.currentTime||0, dur=karAudio.duration||0;
+  if(ksFill) ksFill.style.width=(dur?cur/dur*100:0)+'%';
+  if(ksTimeEl) ksTimeEl.textContent=fmt(cur);
+  ksUpdateLyrics(cur);
+  ksRaf=requestAnimationFrame(ksTick);
+}
+function ksLoad(pos, autoplay){
+  KAR_QUEUE=karDoneTracks(); if(!KAR_QUEUE.length||!KAR_JOB) return;
+  KAR_POS=Math.max(0,Math.min(KAR_QUEUE.length-1,pos));
+  const seq=++KAR_SEQ;                             // invalidate any in-flight fetches
+  KAR_LYRICS=null;
+  const it=KAR_QUEUE[KAR_POS];
+  ksTitle.textContent=it.title; ksState.textContent='Now playing';
+  ksCur.textContent='…'; ksPrev.textContent=''; ksNext.textContent='';
+  const url='/api/karaoke/'+KAR_JOB+'/track/'+it.n;
+  karAudio.src=url; karAudio.load();
+  if(autoplay){
+    const p=karAudio.play();
+    if(p&&p.catch) p.catch(()=>{
+      // autoplay blocked or interrupted — surface a clear, tappable state
+      if(seq!==KAR_SEQ) return;
+      ksState.textContent='Ready — press play';
+      if(!KAR_LYRICS) ksCur.textContent='▶';
+    });
+  }
+  ksRenderQueue();
+  // per-track album-cover backdrop, FORCED from this track's own project cover
+  // on every load — the stem-section song's art must never appear here.
+  KS_TRACK_COVER = it.pid ? ('/api/cover/'+it.pid) : '';
+  if(ksCover) ksCover.style.backgroundImage='';
+  ksApplyCover();
+  ksFetchLyrics(it.pid, it.title, seq);
+}
+function ksOpen(){
+  KAR_QUEUE=karDoneTracks(); if(!KAR_QUEUE.length) return;
+  KS_TRACK_COVER=''; if(ksCover) ksCover.style.backgroundImage='';   // never show a stale backdrop
+  ksStage.classList.add('show');
+  if(!ksRaf) ksRaf=requestAnimationFrame(ksTick);
+  if(typeof window.ksVizStart==='function') window.ksVizStart();
+  ksLoad(0,true);
+}
+function ksExit(){ ksStage.classList.remove('show'); try{karAudio.pause();}catch(_){} if(ksRaf){cancelAnimationFrame(ksRaf); ksRaf=0;} if(ksQueue) ksQueue.classList.remove('open'); }
+if(karPlayAll) karPlayAll.addEventListener('click',ksOpen);
+if(document.getElementById('ksClose')) document.getElementById('ksClose').addEventListener('click',ksExit);
+if(ksPlayBtn) ksPlayBtn.addEventListener('click',()=>{ if(karAudio.paused) karAudio.play().catch(()=>{}); else karAudio.pause(); });
+if(document.getElementById('ksPrevBtn')) document.getElementById('ksPrevBtn').addEventListener('click',()=>ksLoad(KAR_POS-1,true));
+if(document.getElementById('ksNextBtn')) document.getElementById('ksNextBtn').addEventListener('click',()=>ksLoad(KAR_POS+1,true));
+if(document.getElementById('ksQueueToggle')) document.getElementById('ksQueueToggle').addEventListener('click',()=>{ if(ksQueue){ if(!ksQueue.querySelector('.ks-qhead')) ksRenderQueue(); ksQueue.classList.toggle('open'); } });
+if(document.getElementById('ksProgress')) document.getElementById('ksProgress').addEventListener('click',e=>{ const r=e.currentTarget.getBoundingClientRect(); const f=(e.clientX-r.left)/r.width; if(karAudio.duration) karAudio.currentTime=f*karAudio.duration; });
+if(karAudio){
+  karAudio.addEventListener('play',()=>{ if(ksPlayBtn) ksPlayBtn.textContent='⏸'; });
+  karAudio.addEventListener('pause',()=>{ if(ksPlayBtn) ksPlayBtn.textContent='▶'; });
+  karAudio.addEventListener('error',()=>{
+    if(!ksStage.classList.contains('show')) return;
+    ksState.textContent='Track unavailable';
+    ksCur.textContent='⚠ audio file missing — re-run this track';
+    ksPrev.textContent=''; ksNext.textContent='';
+  });
+  karAudio.addEventListener('ended',()=>{ KAR_QUEUE=karDoneTracks(); if(KAR_POS+1<KAR_QUEUE.length) ksLoad(KAR_POS+1,true); else { ksState.textContent='Set complete'; ksCur.textContent='🎤'; } });
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && ksStage.classList.contains('show')) ksExit(); });
+
+// ---- MilkDrop visualizer engine (butterchurn = MilkDrop 2 in WebGL, bundled locally) ----
+const MD={ lib:null, presets:null, names:[] };
+(function(){
+  try{
+    MD.lib=(window.butterchurn&&window.butterchurn.default)||window.butterchurn||null;
+    const bp=(window.butterchurnPresets&&window.butterchurnPresets.default)||window.butterchurnPresets||null;
+    if(bp){ MD.presets=bp.getPresets(); MD.names=Object.keys(MD.presets); }
+  }catch(_){ MD.lib=null; }
+})();
+function mdAvailable(){ return !!(MD.lib && MD.names.length); }
+// One visualizer instance per canvas+audio pairing.
+function mdCreate(ctx, canvas, audioNode){
+  if(!mdAvailable()) return null;
+  try{
+    const v=MD.lib.createVisualizer(ctx, canvas, {width:canvas.clientWidth||800, height:canvas.clientHeight||600});
+    v.connectAudio(audioNode);
+    return v;
+  }catch(e){ console.warn('milkdrop init failed',e); return null; }
+}
+function mdLoad(v, name, blend){ try{ if(v && MD.presets[name]) v.loadPreset(MD.presets[name], blend==null?1.2:blend); }catch(_){} }
+function mdResize(v, canvas){ try{ const dpr=Math.min(1.5,window.devicePixelRatio||1);
+  canvas.width=(canvas.clientWidth||800)*dpr; canvas.height=(canvas.clientHeight||600)*dpr;
+  if(v) v.setRendererSize(canvas.width, canvas.height); }catch(_){} }
+function mdFillPresetSelect(sel, current){
+  if(!sel || !mdAvailable()) return;
+  sel.innerHTML='';
+  MD.names.forEach(n=>{ const o=document.createElement('option'); o.value=n;
+    o.textContent=n.length>34? n.slice(0,34)+'…':n; if(n===current) o.selected=true; sel.appendChild(o); });
+}
+
+// ---- karaoke stage: MilkDrop visualizer + album cover (independent) ----
+(function(){
+  const cv=document.getElementById('ksViz'), gear=document.getElementById('ksSettings'), menu=document.getElementById('ksMenu');
+  const vizSw=document.getElementById('ksVizSw'), presetSel=document.getElementById('ksPreset'),
+        opRange=document.getElementById('ksVizOp'), coverSw=document.getElementById('ksCoverSw');
+  if(!cv||!gear) return;
+  if(!KS_SETTINGS.preset && MD.names.length) KS_SETTINGS.preset=MD.names[Math.floor(Math.random()*MD.names.length)];
+  let kctx=null, ksrc=null, kviz=null, raf=0;
+  function save(){ try{ localStorage.setItem('stemmy.ksviz',JSON.stringify(KS_SETTINGS)); }catch(_){} }
+  function syncUI(){
+    if(vizSw) vizSw.classList.toggle('on',KS_SETTINGS.viz);
+    if(coverSw) coverSw.classList.toggle('on',KS_SETTINGS.cover);
+    if(opRange) opRange.value=Math.round(KS_SETTINGS.vizOp*100);
+    cv.classList.toggle('on',KS_SETTINGS.viz);
+    cv.style.opacity=KS_SETTINGS.viz?KS_SETTINGS.vizOp:0;
+    ksApplyCover();                                 // cover is independent of the visualizer
+  }
+  // size the canvas from its real box (fixes the tiny-corner render)
+  function sizeCanvas(){
+    const r=cv.getBoundingClientRect();
+    if(r.width<2||r.height<2) return false;
+    const dpr=Math.min(1.5,window.devicePixelRatio||1);
+    cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
+    if(kviz){ try{ kviz.setRendererSize(cv.width,cv.height); }catch(_){} }
+    return true;
+  }
+  function ensure(){
+    if(kviz||!mdAvailable()) return;
+    try{
+      if(!kctx){ const C=window.AudioContext||window.webkitAudioContext; kctx=new C(); }
+      if(!ksrc){ ksrc=kctx.createMediaElementSource(karAudio); ksrc.connect(kctx.destination); } // reroute -> keep audible
+      if(!sizeCanvas()) return;                      // wait until laid out
+      kviz=mdCreate(kctx, cv, ksrc);
+      if(kviz){ sizeCanvas(); mdLoad(kviz, KS_SETTINGS.preset, 0); }
+    }catch(e){ console.warn('karaoke viz',e); }
+  }
+  function loop(){
+    if(!ksStage.classList.contains('show')||!KS_SETTINGS.viz){ raf=0; return; }
+    ensure(); if(kctx&&kctx.state==='suspended') kctx.resume().catch(()=>{});
+    if(kviz){ try{ kviz.render(); }catch(_){} }
+    raf=requestAnimationFrame(loop);
+  }
+  window.ksVizStart=function(){
+    syncUI();
+    if(KS_SETTINGS.viz){ requestAnimationFrame(()=>{ ensure(); sizeCanvas(); if(!raf) raf=requestAnimationFrame(loop); }); }
+  };
+  window.addEventListener('resize',()=>{ if(kviz&&ksStage.classList.contains('show')) sizeCanvas(); });
+  gear.addEventListener('click',e=>{ e.stopPropagation(); mdFillPresetSelect(presetSel, KS_SETTINGS.preset); menu.classList.toggle('show'); });
+  document.addEventListener('click',e=>{ if(menu.classList.contains('show') && !menu.contains(e.target) && e.target!==gear) menu.classList.remove('show'); });
+  if(vizSw) vizSw.addEventListener('click',()=>{ KS_SETTINGS.viz=!KS_SETTINGS.viz; save(); syncUI();
+    if(KS_SETTINGS.viz){ requestAnimationFrame(()=>{ ensure(); sizeCanvas(); if(!raf) raf=requestAnimationFrame(loop); }); } });
+  if(coverSw) coverSw.addEventListener('click',()=>{ KS_SETTINGS.cover=!KS_SETTINGS.cover; save(); syncUI(); });
+  if(presetSel) presetSel.addEventListener('change',()=>{ KS_SETTINGS.preset=presetSel.value; save(); if(kviz) mdLoad(kviz, KS_SETTINGS.preset); });
+  if(opRange) opRange.addEventListener('input',()=>{ KS_SETTINGS.vizOp=+opRange.value/100; cv.style.opacity=KS_SETTINGS.viz?KS_SETTINGS.vizOp:0; save(); });
+})();
+
+// ---- studio background: MilkDrop visualizer + album cover (independent) ----
+(function(){
+  const cv=document.getElementById('vizbg'), menu=document.getElementById('vizmenu'), btn=document.getElementById('vizbtn');
+  const coverEl=document.getElementById('vizcoverbg');
+  if(!cv||!btn) return;
+  const sw=document.getElementById('vizsw'), presetSel=document.getElementById('viztype'),
+        opRange=document.getElementById('vizop'), coverSw=document.getElementById('vizcover'),
+        hint=document.getElementById('vizhint');
+  // Both layers ALWAYS start off — only the preset and opacity preferences
+  // persist between sessions.
+  let VIZ={viz:false,cover:false,preset:'',opacity:0.55};
+  try{ const s=JSON.parse(localStorage.getItem('stemmy.viz')||'{}');
+    if(s.preset) VIZ.preset=s.preset;
+    if(typeof s.opacity==='number') VIZ.opacity=s.opacity; }catch(_){}
+  if(!VIZ.preset && MD.names.length) VIZ.preset=MD.names[Math.floor(Math.random()*MD.names.length)];
+  let viz=null, raf=0;
+  function save(){ try{ localStorage.setItem('stemmy.viz',JSON.stringify(VIZ)); }catch(_){} }
+  const hasCover=()=> !!(PROJECT && PROJECT.cover);
+
+  function syncUI(){
+    if(sw) sw.classList.toggle('on',VIZ.viz);
+    if(coverSw) coverSw.classList.toggle('on',VIZ.cover);
+    if(opRange) opRange.value=Math.round(VIZ.opacity*100);
+    if(btn) btn.classList.toggle('on',VIZ.viz||VIZ.cover);
+    // MilkDrop canvas
+    cv.classList.toggle('on',VIZ.viz);
+    cv.style.opacity=VIZ.viz?VIZ.opacity:0;
+    // album cover — independent of the visualizer
+    applyCover();
+    // panels go translucent whenever *either* backdrop is showing
+    document.body.classList.toggle('viz-live', (VIZ.viz || (VIZ.cover&&hasCover())));
+    if(hint) hint.textContent = mdAvailable()
+      ? 'Toggles are independent — show MilkDrop, the album cover, or both. '+MD.names.length+' presets bundled locally.'
+      : 'MilkDrop engine failed to load (WebGL2 needed). The album-cover background still works.';
+  }
+  function applyCover(){
+    if(!coverEl) return;
+    if(VIZ.cover && hasCover()){
+      coverEl.style.backgroundImage='url(/api/cover/'+PROJECT.id+')';
+      coverEl.classList.add('on');
+    } else {
+      coverEl.classList.remove('on');
+    }
+  }
+  // Size the canvas from its real laid-out box (not clientWidth, which is 0 when
+  // the canvas was created hidden — that was the "tiny box in the corner" bug).
+  function sizeCanvas(){
+    const r=cv.getBoundingClientRect();
+    if(r.width<2||r.height<2) return false;
+    const dpr=Math.min(1.5,window.devicePixelRatio||1);
+    cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
+    if(viz){ try{ viz.setRendererSize(cv.width,cv.height); }catch(_){} }
+    return true;
+  }
+  function ensureViz(){
+    if(viz||!mdAvailable()) return;
+    if(!(AUDIO&&AUDIO.ctx&&AUDIO.master)) return;      // audio not decoded yet
+    if(!sizeCanvas()) return;                           // wait until laid out
+    viz=mdCreate(AUDIO.ctx, cv, AUDIO.master);
+    if(viz){ sizeCanvas(); mdLoad(viz, VIZ.preset, 0); }
+  }
+  function loop(){
+    if(!VIZ.viz){ raf=0; return; }
+    ensureViz();
+    if(viz){ try{ viz.render(); }catch(_){} }
+    raf=requestAnimationFrame(loop);
+  }
+  function start(){
+    // defer one frame so the canvas has real layout before we size/create it
+    requestAnimationFrame(()=>{ ensureViz(); sizeCanvas(); if(!raf) raf=requestAnimationFrame(loop); });
+  }
+  function stop(){ if(raf){ cancelAnimationFrame(raf); raf=0; } }
+  // when the studio view (re)appears, re-size the canvas so it fills the stage
+  window.vizStudioResize=function(){ if(VIZ.viz){ sizeCanvas(); if(!raf) start(); } };
+  window.addEventListener('resize',()=>{ if(VIZ.viz) sizeCanvas(); });
+  btn.addEventListener('click',(e)=>{ e.stopPropagation();
+    mdFillPresetSelect(presetSel, VIZ.preset);
+    const r=btn.getBoundingClientRect(); menu.style.left=Math.max(8,Math.min(window.innerWidth-260,r.left))+'px'; menu.style.top=(r.bottom+8)+'px';
+    menu.classList.toggle('show'); });
+  document.addEventListener('click',e=>{ if(menu.classList.contains('show') && !menu.contains(e.target) && e.target!==btn) menu.classList.remove('show'); });
+  if(sw) sw.addEventListener('click',()=>{ VIZ.viz=!VIZ.viz; save(); syncUI(); if(VIZ.viz) start(); else stop(); });
+  if(coverSw) coverSw.addEventListener('click',()=>{ VIZ.cover=!VIZ.cover; save(); syncUI(); });
+  if(presetSel) presetSel.addEventListener('change',()=>{ VIZ.preset=presetSel.value; save(); if(viz) mdLoad(viz, VIZ.preset); });
+  if(opRange) opRange.addEventListener('input',()=>{ VIZ.opacity=+opRange.value/100; cv.style.opacity=VIZ.viz?VIZ.opacity:0; save(); });
+  syncUI(); if(VIZ.viz) start();
+})();
 
 // ---- start separation (SSE) ----
 const startBtn=document.getElementById('startsep');
@@ -1678,6 +2750,53 @@ wrap.addEventListener('click',e=>{
   const dl=e.target.closest('[data-dl]');
   if(dl && STATE.pid){ window.location=dlURL(STATE.pid,[dl.dataset.dl]); }
 });
+
+// ---- double-click a stem to fill the screen (double-click again to restore) ----
+function exitFocus(){ wrap.classList.remove('focusmode'); wrap.querySelectorAll('.channel.focused').forEach(c=>c.classList.remove('focused')); setTimeout(()=>{ try{ redraw(); }catch(_){} },30); }
+wrap.addEventListener('dblclick',e=>{
+  if(e.target.closest('button,input,select,.chev,.sel')) return;   // don't hijack controls
+  const top=e.target.closest('#channels > .channel'); if(!top) return;
+  const wasFocused=top.classList.contains('focused');
+  wrap.querySelectorAll('.channel.focused').forEach(c=>c.classList.remove('focused'));
+  if(wasFocused){ wrap.classList.remove('focusmode'); }
+  else { wrap.classList.add('focusmode'); top.classList.add('focused'); }
+  setTimeout(()=>{ try{ redraw(); }catch(_){} },30);
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && wrap.classList.contains('focusmode')) exitFocus(); });
+
+// ---- tab / MIDI transcription (beta) ----
+const tabModal=document.getElementById('tabmodal');
+function openTab(){ if(tabModal) tabModal.classList.add('show'); }
+function closeTab(){ if(tabModal) tabModal.classList.remove('show'); }
+if(document.getElementById('tabclose')) document.getElementById('tabclose').addEventListener('click',closeTab);
+if(tabModal) tabModal.addEventListener('click',e=>{ if(e.target===tabModal) closeTab(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeTab(); });
+wrap.addEventListener('click',async e=>{
+  const tb=e.target.closest('[data-tab]');
+  if(!tb || !STATE.pid) return;
+  const id=tb.dataset.tab;
+  const name=(function(){ const c=tb.closest('.channel'); const n=c&&c.querySelector('.nm .n'); return n?n.textContent.trim():id; })();
+  const title=document.getElementById('tabtitle'), status=document.getElementById('tabstatus'), pre=document.getElementById('tabpre');
+  const dlM=document.getElementById('tabdlmidi'), dlT=document.getElementById('tabdltab');
+  title.textContent='MIDI + Tab · '+name;
+  status.style.display='flex'; status.innerHTML='<span class="spin"></span> Transcribing “'+name+'” to MIDI… (first run loads the model)';
+  pre.style.display='none'; pre.textContent=''; dlM.style.display='none'; dlT.style.display='none';
+  tb.classList.add('busy'); openTab();
+  try{
+    const r=await fetch('/api/tab/'+STATE.pid+'/'+encodeURIComponent(id),{method:'POST'});
+    const j=await r.json();
+    if(!r.ok){ status.innerHTML='⚠ '+(j.error||('failed ('+r.status+')')); }
+    else{
+      status.style.display='none';
+      pre.style.display='block'; pre.textContent=j.tab||'(no tab)';
+      if(j.midi_url){ dlM.style.display='inline-flex'; dlM.onclick=()=>{ window.location=j.midi_url; }; }
+      dlT.style.display='inline-flex';
+      dlT.onclick=()=>{ const blob=new Blob([j.tab||''],{type:'text/plain'}); const u=URL.createObjectURL(blob);
+        const a=document.createElement('a'); a.href=u; a.download=name.replace(/[^\w.-]+/g,'_')+'.txt'; a.click(); setTimeout(()=>URL.revokeObjectURL(u),1000); };
+    }
+  }catch(err){ status.innerHTML='⚠ '+err.message; }
+  finally{ tb.classList.remove('busy'); }
+});
 const dlSelBtn=document.getElementById('dlsel');
 const dlAllBtn=document.getElementById('dlall');
 if(dlSelBtn) dlSelBtn.addEventListener('click',()=>{
@@ -1711,6 +2830,8 @@ function hydrateHeader(){
     // studio tempo strip (single source of truth, replaces the old inline defaults)
     const bpmEl=document.querySelector('.tempo .bpm'); if(bpmEl) bpmEl.innerHTML=(a.bpm!=null? a.bpm.toFixed(1):'—')+' <small>bpm</small>';
     railSmall('upload', pj.source_name||'');
+    const th=document.getElementById('projthumb');
+    if(th && pj.cover){ th.src='/api/cover/'+pj.id; th.style.display='block'; }
     railSmall('depth', (cap(pj.depth)||'')+' · '+pj.stems.length+' stems');
     railSmall('processing','done'); railSmall('studio','mix · play · export');
   } else if(!DESIGN){
@@ -1812,7 +2933,40 @@ function showResume(){
 }
 if(DESIGN){ goStep('studio'); }
 else if(VIEW==='studio' && REAL){ goStep('studio'); }
+else if(VIEW==='studio' && PROJECT){
+  // A saved session was opened, but separation never finished (no stems on disk).
+  // Don't dump the user on a blank upload screen — restore the point in the
+  // workflow they left off at, with the source track already selected. (issues 4 & 5)
+  STATE.pid=PROJECT.id;
+  STATE.depth=PROJECT.depth||'standard';
+  restoreSession(PROJECT);
+}
 else { goStep('upload'); showResume(); }
+
+// Bring a stemless saved project back to life at the right workflow step.
+function restoreSession(p){
+  const status=p.status||'uploaded';
+  // reflect the loaded source in the header + upload screen
+  try{
+    const nm=document.getElementById('projname'); if(nm) nm.textContent=p.source_name||'project';
+    const um=document.getElementById('uploadmsg');
+    if(um){ um.style.color='var(--muted)';
+      um.textContent='Restored session · '+(p.source_name||'project')+(p.created?(' · '+p.created):''); }
+  }catch(_){}
+  // if it was mid-separation or already had a depth chosen, land on Depth so the
+  // user can (re)start; a fresh upload with no depth lands on Depth too so they
+  // can pick and go. Either way the project id is live, so Start actually runs.
+  if(status==='separating' || status==='uploaded' || status==='error'){
+    goStep('depth');
+    // pre-select the previously chosen depth card if there was one
+    if(p.depth){ try{
+      document.querySelectorAll('.card').forEach(c=>{
+        c.classList.toggle('active', c.dataset.depth===p.depth); });
+    }catch(_){} }
+  } else {
+    goStep('upload');
+  }
+}
 </script>
 </body>
 </html>

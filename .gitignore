@@ -10,6 +10,7 @@ projects/*
 !projects/.gitkeep
 uploads/*
 !uploads/.gitkeep
+karaoke_jobs/
 models_cache/
 
 # local launchers kept off GitHub
