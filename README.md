@@ -52,9 +52,9 @@ zip. Everything runs on your machine; **no audio ever leaves it**.
 
 ![Mixing](docs/screenshots/mixing.png)
 
-**Extended depth** (experimental) drives a 53-stem model for instrument-level splits:
+**Karaoke Mode!** - batch-strip vocals from a whole Youtube playlist into instrumentals with a full-screen player, visualizer & auto-advancing queue
 
-![Extended instruments](docs/screenshots/extended.png)
+![Karaoke Mode](docs\screenshots\Karaoke1.png)
 
 ## Tested on / requirements
 
