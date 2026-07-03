@@ -54,7 +54,7 @@ zip. Everything runs on your machine; **no audio ever leaves it**.
 
 **Karaoke Mode!** - batch-strip vocals from a whole Youtube playlist into instrumentals with a full-screen player, visualizer & auto-advancing queue
 
-![Karaoke Mode](docs\screenshots\Karaoke1.png)
+![Karaoke Mode](docs/screenshots/Karaoke1.png)
 
 ## Tested on / requirements
 
