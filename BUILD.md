@@ -5,12 +5,25 @@ The `.bat` launchers make Stemmy a double-click app on Windows. They're **gitign
 contents** — paste them back into files of the same name in the project root if you cloned
 from GitHub.
 
+## Install everything at once
+
+**`install_all.bat`** is the one-shot installer: double-click it and it installs everything in one
+self-contained script — it does **not** shell out to the other `.bat` files, so it works even if
+they're missing. In order it sets up the `.venv` + app deps + CUDA 12.8 torch, updates yt-dlp, then
+installs song ID (shazamio), MIDI/Tab export (Basic Pitch + ONNX), and the Extended 53-stem MSST
+model (~2 GB). Every step is skip-if-present and self-healing, the run continues past any failure,
+and it prints a summary of anything to re-run at the end. It intentionally **does not** run
+`fix_gpu.bat` (that needs admin and changes your Windows power plan — run it yourself if needed).
+After it finishes, start Stemmy with `run.bat`.
+
 ## Table of contents
 
+- [Install everything at once](#install-everything-at-once)
 - [One-time setup, then run](#one-time-setup-then-run)
 - [What each launcher does](#what-each-launcher-does)
 - [Encoding notes (CRLF / SmartScreen)](#encoding-notes-crlf--smartscreen)
 - [Full contents](#full-contents)
+  - [install_all.bat](#install_allbat)
   - [setup.bat](#setupbat)
   - [run.bat](#runbat)
   - [stop.bat](#stopbat)
@@ -24,6 +37,7 @@ from GitHub.
 
 ## One-time setup, then run
 
+0. **`install_all.bat`** *(shortcut)* — runs steps 1 + 4–7 below in one go (everything except `run.bat` and `fix_gpu.bat`).
 1. **`setup.bat`** — creates `.venv`, installs dependencies, then force-installs the CUDA 12.8
    PyTorch build last so nothing overwrites it. Skips anything already installed.
 2. **`run.bat`** — starts the server (HIGH priority, to limit laptop GPU throttling) and opens
@@ -38,6 +52,7 @@ from GitHub.
 
 | Launcher | What it does | When to run |
 |----------|--------------|-------------|
+| `install_all.bat` | Self-contained one-shot install: `.venv` + deps + CUDA torch, yt-dlp, song ID, tabs, and MSST — inlined (doesn't call the other bats). Skips `fix_gpu`. | First install, to do everything at once |
 | `setup.bat` | Build `.venv`, install deps, force CUDA `cu128` torch last. Idempotent. | First, and after dependency changes |
 | `run.bat` | Activate `.venv`, launch the server in a HIGH-priority window, open the browser. | Every time you use Stemmy |
 | `stop.bat` | Kill whatever is listening on port 5002. | To shut the server down |
@@ -59,6 +74,265 @@ from GitHub.
   (it changes the power plan and per-process power-throttling).
 
 ## Full contents
+
+### install_all.bat
+
+One-shot, **self-contained** installer — it inlines every install step instead of calling the
+other `.bat` files, so it works even if they were never created. In order: `.venv` + app deps +
+CUDA 12.8 torch, then yt-dlp, song ID (shazamio), MIDI/Tab export (Basic Pitch + ONNX), and the
+Extended 53-stem MSST model (~2 GB). Every step is skip-if-present and self-healing; the run
+continues past any failure and prints a summary at the end. Does **not** run `fix_gpu.bat`.
+
+```bat
+@echo off
+setlocal enabledelayedexpansion
+cd /d "%~dp0"
+title Stemmy - install everything
+
+echo ==========================================================
+echo   Stemmy - install all  (self-contained; skips what's done)
+echo ==========================================================
+echo.
+echo Installs, in order:
+echo   1. core app + CUDA 12.8 torch (required)
+echo   2. yt-dlp (YouTube import, kept current)
+echo   3. song ID (shazamio)
+echo   4. MIDI + Tab export (Basic Pitch + ONNX)
+echo   5. Extended 53-stem depth (ZFTurbo MSST, ~2 GB - optional)
+echo.
+echo fix_gpu.bat is NOT run here - it needs admin and changes your
+echo Windows power plan. Run it separately if the GPU throttles.
+echo.
+pause
+
+set "FAILED="
+
+REM ======================================================================
+REM  1) CORE: virtual env + app deps + CUDA torch + yt-dlp
+REM ======================================================================
+echo.
+echo ----------------------------------------------------------
+echo   [1] Core app + CUDA 12.8 torch
+echo ----------------------------------------------------------
+
+where py >nul 2>&1 && (set "PY=py") || (set "PY=python")
+%PY% --version >nul 2>&1 || (
+  echo [X] Python was not found on PATH. Install Python 3.10+ and re-run.
+  set "FAILED=!FAILED! core:no-python"
+  goto :after_core
+)
+
+set "NEWVENV=0"
+if not exist ".venv\Scripts\activate.bat" (
+  echo Creating virtual environment .venv ...
+  %PY% -m venv .venv || (set "FAILED=!FAILED! core:venv" & goto :after_core)
+  set "NEWVENV=1"
+) else (
+  echo .venv          already present - skipping.
+)
+call ".venv\Scripts\activate.bat" || (set "FAILED=!FAILED! core:activate" & goto :after_core)
+
+if "!NEWVENV!"=="1" (
+  python -m pip install --upgrade pip
+)
+
+REM app dependencies (may pull a CPU-only torch; the CUDA step below corrects it)
+python -c "import flask, audio_separator, librosa, soundfile, numpy" 2>nul
+if errorlevel 1 (
+  echo requirements   installing app dependencies ...
+  pip install -r requirements.txt || (set "FAILED=!FAILED! core:requirements" & goto :after_core)
+) else (
+  echo requirements   already satisfied - skipping.
+)
+
+REM PyTorch with CUDA 12.8 (Blackwell sm_120), asserted LAST so nothing overwrites it
+python -c "import torch, sys; sys.exit(0 if torch.cuda.is_available() else 1)" 2>nul
+if errorlevel 1 (
+  echo torch          installing CUDA 12.8 build for Blackwell ^(force-reinstall^) ...
+  pip install --force-reinstall --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cu128 || (set "FAILED=!FAILED! core:torch" & goto :after_core)
+) else (
+  echo torch          CUDA build already active - skipping.
+)
+
+echo.
+echo Verifying the GPU is visible to torch ...
+python -c "import torch as T; ok=T.cuda.is_available(); print('  torch  :', T.__version__); print('  CUDA   :', ok); print('  GPU    :', T.cuda.get_device_name(0) if ok else 'CPU only')"
+python -c "import torch, sys; sys.exit(0 if torch.cuda.is_available() else 1)" 2>nul || (
+  echo   [!] Still CPU-only. The cu128 index may not have a wheel for your
+  echo       Python version. Use Python 3.12 or 3.13, or try the cu129 index.
+)
+:after_core
+
+REM ======================================================================
+REM  2) yt-dlp (keep current - fixes most YouTube 403 fetch failures)
+REM ======================================================================
+echo.
+echo ----------------------------------------------------------
+echo   [2] yt-dlp (YouTube import)
+echo ----------------------------------------------------------
+if exist ".venv\Scripts\activate.bat" (
+  call ".venv\Scripts\activate.bat"
+  echo Updating yt-dlp to the newest version ...
+  python -m pip install -U yt-dlp || set "FAILED=!FAILED! yt-dlp"
+) else (
+  echo [!] No .venv - core step must succeed first. Skipping.
+  set "FAILED=!FAILED! yt-dlp:no-venv"
+)
+
+REM ======================================================================
+REM  3) song ID (shazamio). Lyrics come from LRCLIB (free, no package).
+REM ======================================================================
+echo.
+echo ----------------------------------------------------------
+echo   [3] Song ID (shazamio)
+echo ----------------------------------------------------------
+if exist ".venv\Scripts\activate.bat" (
+  call ".venv\Scripts\activate.bat"
+  echo Installing shazamio ^(song identification^) ...
+  pip install shazamio && python -c "import shazamio; print('Song ID + lyrics ready.')" || (
+    echo [!] Song ID install failed - you can still type a title/artist for lyrics.
+    set "FAILED=!FAILED! song-id"
+  )
+) else (
+  echo [!] No .venv - core step must succeed first. Skipping.
+  set "FAILED=!FAILED! song-id:no-venv"
+)
+
+REM ======================================================================
+REM  4) MIDI + Tab export (Basic Pitch, ONNX runtime).
+REM     --no-deps on basic-pitch: its metadata hard-pins TensorFlow, which
+REM     has no matching wheel on Windows/py3.12. We add the real runtime deps.
+REM ======================================================================
+echo.
+echo ----------------------------------------------------------
+echo   [4] MIDI + Tab export (Basic Pitch)
+echo ----------------------------------------------------------
+if exist ".venv\Scripts\activate.bat" (
+  call ".venv\Scripts\activate.bat"
+  echo Installing Basic Pitch ^(audio-to-MIDI^) without its TensorFlow pin ...
+  pip install "basic-pitch==0.4.0" --no-deps || (set "FAILED=!FAILED! tabs" & goto :after_tabs)
+  echo Installing the ONNX runtime + light transcription deps ...
+  pip install onnxruntime "pretty_midi>=0.2.9" "resampy>=0.2.2,<0.4.3" "mir_eval>=0.6" || (set "FAILED=!FAILED! tabs" & goto :after_tabs)
+  python -c "from basic_pitch.inference import predict; import onnxruntime; print('Tab/MIDI export ready.')" || set "FAILED=!FAILED! tabs"
+) else (
+  echo [!] No .venv - core step must succeed first. Skipping.
+  set "FAILED=!FAILED! tabs:no-venv"
+)
+:after_tabs
+
+REM ======================================================================
+REM  5) Extended 53-stem depth (ZFTurbo MSST + bs_roformer checkpoint).
+REM     Big (~2 GB) and VRAM-hungry. We DON'T build the project (its build
+REM     needs git + setuptools-scm); we drop the code in place and install
+REM     only the libs inference.py needs.
+REM ======================================================================
+echo.
+echo ----------------------------------------------------------
+echo   [5] Extended 53-stem depth (ZFTurbo MSST, ~2 GB)
+echo ----------------------------------------------------------
+set "MODEL_TYPE=bs_roformer"
+set "CFG_NAME=mvsep_mega_model_bs_roformer_53_stems.yaml"
+set "CKPT_NAME=mvsep_mega_model_bs_roformer_53_stems_v1.ckpt"
+set "REL=https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/download/v1.0.21"
+set "MSST_DEPS=ml-collections omegaconf PyYAML librosa matplotlib soundfile tqdm numpy beartype einops packaging rotary-embedding-torch PoPE-pytorch"
+
+if not exist ".venv\Scripts\activate.bat" (
+  echo [!] No .venv - core step must succeed first. Skipping.
+  set "FAILED=!FAILED! msst:no-venv"
+  goto :after_msst
+)
+call ".venv\Scripts\activate.bat"
+if not exist "models_cache" mkdir "models_cache"
+if not exist "models_cache\msst_models" mkdir "models_cache\msst_models"
+
+echo [5.1] MSST inference code ...
+set "MSSTOK="
+if exist "models_cache\msst\inference.py" if exist "models_cache\msst\pyproject.toml" set "MSSTOK=1"
+if defined MSSTOK (
+  echo       present and complete - skipping.
+) else (
+  echo       downloading + extracting ^(via PowerShell^) ...
+  if exist "models_cache\msst" rmdir /s /q "models_cache\msst"
+  if exist "models_cache\_msst_tmp" rmdir /s /q "models_cache\_msst_tmp"
+  curl -fL -o "models_cache\msst.zip" "https://github.com/ZFTurbo/Music-Source-Separation-Training/archive/refs/heads/main.zip"
+  if errorlevel 1 (set "FAILED=!FAILED! msst:download-code" & goto :after_msst)
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath 'models_cache\msst.zip' -DestinationPath 'models_cache\_msst_tmp' -Force"
+  if errorlevel 1 (set "FAILED=!FAILED! msst:extract" & goto :after_msst)
+  set "MSSTSRC="
+  for /r "models_cache\_msst_tmp" %%F in (inference.py) do if not defined MSSTSRC set "MSSTSRC=%%~dpF"
+  if not defined MSSTSRC (
+    echo [X] inference.py not found after extract.
+    set "FAILED=!FAILED! msst:no-inference"
+    goto :after_msst
+  )
+  move "!MSSTSRC:~0,-1!" "models_cache\msst" >nul
+  rmdir /s /q "models_cache\_msst_tmp" >nul 2>&1
+  del "models_cache\msst.zip" >nul 2>&1
+  if not exist "models_cache\msst\pyproject.toml" (
+    echo [X] pyproject.toml missing after extract.
+    set "FAILED=!FAILED! msst:no-pyproject"
+    goto :after_msst
+  )
+)
+
+echo [5.2] Installing MSST inference dependencies ...
+pip install %MSST_DEPS%
+if errorlevel 1 (set "FAILED=!FAILED! msst:deps" & goto :after_msst)
+python -c "import torch,sys;sys.exit(0 if torch.cuda.is_available() else 1)" 2>nul
+if errorlevel 1 (
+  echo       [!] torch lost CUDA - restoring the cu128 build ...
+  pip install --force-reinstall --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cu128
+)
+
+echo [5.3] Downloading model config + checkpoint ...
+if exist "models_cache\msst_models\%CFG_NAME%" (
+  for %%F in ("models_cache\msst_models\%CFG_NAME%") do if %%~zF LSS 200 del "models_cache\msst_models\%CFG_NAME%"
+)
+if not exist "models_cache\msst_models\%CFG_NAME%" (
+  curl -fL -o "models_cache\msst_models\%CFG_NAME%" "%REL%/%CFG_NAME%"
+  if errorlevel 1 (set "FAILED=!FAILED! msst:config" & goto :after_msst)
+)
+if exist "models_cache\msst_models\%CKPT_NAME%" (
+  for %%F in ("models_cache\msst_models\%CKPT_NAME%") do if %%~zF LSS 50000000 del "models_cache\msst_models\%CKPT_NAME%"
+)
+if not exist "models_cache\msst_models\%CKPT_NAME%" (
+  echo       downloading checkpoint ^(~2 GB, this takes a while^) ...
+  curl -fL -o "models_cache\msst_models\%CKPT_NAME%" "%REL%/%CKPT_NAME%"
+  if errorlevel 1 (set "FAILED=!FAILED! msst:checkpoint" & goto :after_msst)
+)
+set "SZ="
+for %%F in ("models_cache\msst_models\%CKPT_NAME%") do set "SZ=%%~zF"
+if not defined SZ (set "FAILED=!FAILED! msst:checkpoint-missing" & goto :after_msst)
+if !SZ! LSS 50000000 (
+  echo [X] checkpoint only !SZ! bytes - download failed. Deleting.
+  del "models_cache\msst_models\%CKPT_NAME%" >nul 2>&1
+  set "FAILED=!FAILED! msst:checkpoint-small"
+  goto :after_msst
+)
+
+echo [5.4] Writing manifest ...
+> "models_cache\msst_models\manifest.json" echo {"model_type":"%MODEL_TYPE%","config":"%CFG_NAME%","checkpoint":"%CKPT_NAME%"}
+echo       MSST ready (!SZ! bytes).
+:after_msst
+
+REM ======================================================================
+REM  Summary
+REM ======================================================================
+echo.
+echo ==========================================================
+if defined FAILED (
+  echo   Finished, but these steps reported a problem:
+  echo  !FAILED!
+  echo   Stemmy still runs without the optional ones. Re-run this
+  echo   script (it self-heals) or the matching get_*.bat to retry.
+) else (
+  echo   All installers finished. Start Stemmy with run.bat.
+)
+echo ==========================================================
+echo.
+pause
+exit /b 0
+```
 
 ### setup.bat
 
