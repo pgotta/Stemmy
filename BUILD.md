@@ -37,6 +37,12 @@ After it finishes, start Stemmy with `run.bat`.
 
 ## One-time setup, then run
 
+> **Python version matters.** Use **Python 3.10 – 3.13** (3.12 or 3.13 recommended). Python **3.14 is
+> too new** — several audio dependencies (`diffq`, `numba`/`llvmlite`, `basic-pitch`) have no wheels for
+> it yet and will fail to build. `setup.bat` and `install_all.bat` now auto-pick a supported version via
+> the `py` launcher and stop with a clear message if only 3.14+ is found. Get 3.12/3.13 from
+> [python.org/downloads](https://www.python.org/downloads/).
+
 0. **`install_all.bat`** *(shortcut)* — runs steps 1 + 4–7 below in one go (everything except `run.bat` and `fix_gpu.bat`).
 1. **`setup.bat`** — creates `.venv`, installs dependencies, then force-installs the CUDA 12.8
    PyTorch build last so nothing overwrites it. Skips anything already installed.
@@ -115,12 +121,31 @@ echo ----------------------------------------------------------
 echo   [1] Core app + CUDA 12.8 torch
 echo ----------------------------------------------------------
 
-where py >nul 2>&1 && (set "PY=py") || (set "PY=python")
+REM pick a SUPPORTED Python (3.10 - 3.13); 3.14 has no wheels for the audio
+REM stack and 3.13 dropped stdlib audioop, so we prefer 3.13..3.10.
+set "PY="
+for %%V in (3.13 3.12 3.11 3.10) do (
+  if not defined PY (
+    py -%%V -c "import sys" >nul 2>&1 && set "PY=py -%%V"
+  )
+)
+if not defined PY (
+  where py >nul 2>&1 && (set "PY=py") || (set "PY=python")
+  %PY% -c "import sys; raise SystemExit(0 if (3,10)<=sys.version_info[:2]<=(3,13) else 1)" >nul 2>&1 || (
+    echo [X] No supported Python found. Stemmy needs Python 3.10 - 3.13.
+    %PY% --version 2>nul
+    echo     Install Python 3.12 or 3.13 from https://www.python.org/downloads/
+    echo     then re-run. ^(3.14 is too new; 3.13 dropped a module some libs need.^)
+    set "FAILED=!FAILED! core:python-version"
+    goto :after_core
+  )
+)
 %PY% --version >nul 2>&1 || (
-  echo [X] Python was not found on PATH. Install Python 3.10+ and re-run.
+  echo [X] Python was not found on PATH. Install Python 3.12 or 3.13 and re-run.
   set "FAILED=!FAILED! core:no-python"
   goto :after_core
 )
+for /f "delims=" %%V in ('%PY% --version 2^>^&1') do echo Using %%V
 
 set "NEWVENV=0"
 if not exist ".venv\Scripts\activate.bat" (
@@ -189,7 +214,10 @@ echo ----------------------------------------------------------
 if exist ".venv\Scripts\activate.bat" (
   call ".venv\Scripts\activate.bat"
   echo Installing shazamio ^(song identification^) ...
-  pip install shazamio && python -c "import shazamio; print('Song ID + lyrics ready.')" || (
+  pip install shazamio >nul 2>nul
+  rem Python 3.13 removed stdlib 'audioop' that pydub (shazamio dep) needs.
+  python -c "import sys; raise SystemExit(0 if sys.version_info[:2]>=(3,13) else 1)" >nul 2>&1 && pip install audioop-lts >nul 2>nul
+  python -c "import shazamio; print('Song ID + lyrics ready.')" || (
     echo [!] Song ID install failed - you can still type a title/artist for lyrics.
     set "FAILED=!FAILED! song-id"
   )
@@ -213,6 +241,7 @@ if exist ".venv\Scripts\activate.bat" (
   pip install "basic-pitch==0.4.0" --no-deps || (set "FAILED=!FAILED! tabs" & goto :after_tabs)
   echo Installing the ONNX runtime + light transcription deps ...
   pip install onnxruntime "pretty_midi>=0.2.9" "resampy>=0.2.2,<0.4.3" "mir_eval>=0.6" || (set "FAILED=!FAILED! tabs" & goto :after_tabs)
+  pip install "librosa>=0.10" scikit-learn "setuptools<81" typing-extensions || (set "FAILED=!FAILED! tabs" & goto :after_tabs)
   python -c "from basic_pitch.inference import predict; import onnxruntime; print('Tab/MIDI export ready.')" || set "FAILED=!FAILED! tabs"
 ) else (
   echo [!] No .venv - core step must succeed first. Skipping.
@@ -256,18 +285,16 @@ if defined MSSTOK (
   if exist "models_cache\_msst_tmp" rmdir /s /q "models_cache\_msst_tmp"
   curl -fL -o "models_cache\msst.zip" "https://github.com/ZFTurbo/Music-Source-Separation-Training/archive/refs/heads/main.zip"
   if errorlevel 1 (set "FAILED=!FAILED! msst:download-code" & goto :after_msst)
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath 'models_cache\msst.zip' -DestinationPath 'models_cache\_msst_tmp' -Force"
+  rem locate + move the folder containing inference.py inside PowerShell (robust)
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { Expand-Archive -LiteralPath 'models_cache\msst.zip' -DestinationPath 'models_cache\_msst_tmp' -Force; $inf = Get-ChildItem -Path 'models_cache\_msst_tmp' -Recurse -Filter 'inference.py' | Select-Object -First 1; if (-not $inf) { Write-Host '[X] inference.py not found in archive.'; exit 3 }; $src = $inf.Directory.FullName; New-Item -ItemType Directory -Force -Path 'models_cache\msst' | Out-Null; Get-ChildItem -LiteralPath $src -Force | Move-Item -Destination 'models_cache\msst' -Force; exit 0 } catch { Write-Host ('[X] ' + $_.Exception.Message); exit 4 }"
   if errorlevel 1 (set "FAILED=!FAILED! msst:extract" & goto :after_msst)
-  set "MSSTSRC="
-  for /r "models_cache\_msst_tmp" %%F in (inference.py) do if not defined MSSTSRC set "MSSTSRC=%%~dpF"
-  if not defined MSSTSRC (
-    echo [X] inference.py not found after extract.
+  rmdir /s /q "models_cache\_msst_tmp" >nul 2>&1
+  del "models_cache\msst.zip" >nul 2>&1
+  if not exist "models_cache\msst\inference.py" (
+    echo [X] inference.py missing after extract.
     set "FAILED=!FAILED! msst:no-inference"
     goto :after_msst
   )
-  move "!MSSTSRC:~0,-1!" "models_cache\msst" >nul
-  rmdir /s /q "models_cache\_msst_tmp" >nul 2>&1
-  del "models_cache\msst.zip" >nul 2>&1
   if not exist "models_cache\msst\pyproject.toml" (
     echo [X] pyproject.toml missing after extract.
     set "FAILED=!FAILED! msst:no-pyproject"
@@ -324,7 +351,7 @@ if defined FAILED (
   echo   Finished, but these steps reported a problem:
   echo  !FAILED!
   echo   Stemmy still runs without the optional ones. Re-run this
-  echo   script (it self-heals) or the matching get_*.bat to retry.
+  echo   script - it self-heals - or the matching get_*.bat to retry.
 ) else (
   echo   All installers finished. Start Stemmy with run.bat.
 )
@@ -346,12 +373,34 @@ echo   Stemmy - setup  (skips anything already installed)
 echo ==========================================================
 echo.
 
-REM --- pick a Python launcher (prefer the py launcher) ---------------
-where py >nul 2>&1 && (set "PY=py") || (set "PY=python")
+REM --- pick a SUPPORTED Python (3.10 - 3.13) ------------------------
+REM The audio stack (diffq, numba/llvmlite, pydub, basic-pitch) has no
+REM wheels for Python 3.14 yet, and 3.13 removed the stdlib 'audioop'
+REM module pydub needs. So we prefer 3.13 down to 3.10 via the py
+REM launcher, and refuse anything outside that range with a clear message.
+set "PY="
+for %%V in (3.13 3.12 3.11 3.10) do (
+  if not defined PY (
+    py -%%V -c "import sys" >nul 2>&1 && set "PY=py -%%V"
+  )
+)
+if not defined PY (
+  REM no py launcher match - try bare py / python, then verify the version
+  where py >nul 2>&1 && (set "PY=py") || (set "PY=python")
+  %PY% -c "import sys; raise SystemExit(0 if (3,10)<=sys.version_info[:2]<=(3,13) else 1)" >nul 2>&1 || (
+    echo [X] No supported Python found. Stemmy needs Python 3.10 - 3.13.
+    %PY% --version 2>nul
+    echo     Python 3.14 is too new ^(no wheels yet^) and 3.13 dropped a
+    echo     module some audio libs use. Install Python 3.12 or 3.13 from
+    echo     https://www.python.org/downloads/  then re-run this script.
+    goto :fail
+  )
+)
 %PY% --version >nul 2>&1 || (
-  echo [X] Python was not found on PATH. Install Python 3.10+ and re-run.
+  echo [X] Python was not found on PATH. Install Python 3.12 or 3.13 and re-run.
   goto :fail
 )
+for /f "delims=" %%V in ('%PY% --version 2^>^&1') do echo Using %%V
 
 REM --- virtual environment (.venv is gitignored) -------------------
 set "NEWVENV=0"
@@ -679,17 +728,18 @@ if defined MSSTOK (
   if exist "models_cache\_msst_tmp" rmdir /s /q "models_cache\_msst_tmp"
   curl -fL -o "models_cache\msst.zip" "https://github.com/ZFTurbo/Music-Source-Separation-Training/archive/refs/heads/main.zip"
   if errorlevel 1 goto :fail
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath 'models_cache\msst.zip' -DestinationPath 'models_cache\_msst_tmp' -Force"
+  rem Extract, then move the folder that actually contains inference.py straight
+  rem into models_cache\msst. Doing the locate+move inside PowerShell avoids the
+  rem fragile cmd for-loop / substring / MOVE chain that could leave msst as the
+  rem parent folder (the "pyproject.toml missing" failure some users hit).
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { Expand-Archive -LiteralPath 'models_cache\msst.zip' -DestinationPath 'models_cache\_msst_tmp' -Force; $inf = Get-ChildItem -Path 'models_cache\_msst_tmp' -Recurse -Filter 'inference.py' | Select-Object -First 1; if (-not $inf) { Write-Host '[X] inference.py not found in archive.'; exit 3 }; $src = $inf.Directory.FullName; New-Item -ItemType Directory -Force -Path 'models_cache\msst' | Out-Null; Get-ChildItem -LiteralPath $src -Force | Move-Item -Destination 'models_cache\msst' -Force; exit 0 } catch { Write-Host ('[X] ' + $_.Exception.Message); exit 4 }"
   if errorlevel 1 goto :fail
-  set "MSSTSRC="
-  for /r "models_cache\_msst_tmp" %%F in (inference.py) do if not defined MSSTSRC set "MSSTSRC=%%~dpF"
-  if not defined MSSTSRC (
-    echo [X] inference.py not found after extract.
-    goto :fail
-  )
-  move "!MSSTSRC:~0,-1!" "models_cache\msst" >nul
   rmdir /s /q "models_cache\_msst_tmp" >nul 2>&1
   del "models_cache\msst.zip" >nul 2>&1
+  if not exist "models_cache\msst\inference.py" (
+    echo [X] inference.py missing after extract.
+    goto :fail
+  )
   if not exist "models_cache\msst\pyproject.toml" (
     echo [X] pyproject.toml missing after extract.
     goto :fail
@@ -795,7 +845,12 @@ pip install "basic-pitch==0.4.0" --no-deps || goto :fail
 echo.
 echo Installing the ONNX runtime + light transcription deps ...
 pip install onnxruntime "pretty_midi>=0.2.9" "resampy>=0.2.2,<0.4.3" "mir_eval>=0.6" || goto :fail
-REM librosa / numpy / scipy already come from requirements.txt
+REM basic-pitch imports librosa + scikit-learn at runtime; we install with
+REM --no-deps (to skip its TensorFlow pin) so we add these ourselves. They
+REM normally come from requirements.txt too, but a failed/partial core install
+REM can leave them missing - installing here makes tabs self-sufficient.
+REM setuptools provides pkg_resources, which resampy 0.4.2 imports.
+pip install "librosa>=0.10" scikit-learn "setuptools<81" typing-extensions || goto :fail
 
 echo.
 echo Verifying ...
@@ -836,6 +891,10 @@ if exist ".venv\Scripts\activate.bat" (
 echo.
 echo Installing shazamio (song identification) ...
 pip install shazamio || goto :fail
+REM Python 3.13 removed the stdlib 'audioop' module that pydub (a shazamio
+REM dependency) imports. Install the audioop-lts backport so it works on 3.13.
+REM (Harmless on 3.10-3.12, where it simply isn't needed.)
+python -c "import sys; raise SystemExit(0 if sys.version_info[:2]>=(3,13) else 1)" >nul 2>&1 && pip install audioop-lts
 echo.
 python -c "import shazamio; print('Song ID + lyrics ready.')" || goto :fail
 echo.
@@ -867,7 +926,7 @@ if exist ".venv\Scripts\activate.bat" (
   call ".venv\Scripts\activate.bat"
 ) else (
   echo [!] No .venv found - run setup.bat first.
-  pause & exit /b 1
+  pause ^& exit /b 1
 )
 
 echo ==========================================================
