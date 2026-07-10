@@ -76,7 +76,7 @@ exception on RAM; see its section below.
 > dependencies (`diffq`, `numba` / `llvmlite`, `basic-pitch`) have no wheels for it yet and will try to
 > build from source and fail. `setup.bat` and `install_all.bat` auto-pick a supported version through
 > the `py` launcher and stop with a clear message if only 3.14+ is found. If you have both 3.14 and a
-> supported version installed, the scripts will select the supported one; just delete any `.venv` that a
+> supported version installed, the scripts select the supported one; just delete any `.venv` that a
 > failed 3.14 run created first, so it rebuilds on the right interpreter.
 
 ## Disk space
@@ -99,7 +99,7 @@ Budget roughly **15–25 GB free**, mostly model weights downloaded on first use
 > does. The steps below are the manual equivalent.
 
 PyTorch must match **your** CUDA, so install it first, otherwise `audio-separator` may pull
-a CPU-only torch. Make sure `python` points at a supported version (3.10 to 3.13) before you start.
+a CPU-only torch.
 
 ```bash
 # 1) GPU torch for an RTX 5060 / CUDA 12.8 (Blackwell needs cu128)
@@ -178,9 +178,8 @@ column spacing, and polyphonic guitar is imperfect. Monophonic bass is the most 
 export MIDI but not string tab (they're unpitched).
 
 `get_tabs.bat` installs Basic Pitch with `--no-deps` on purpose: its metadata hard-pins TensorFlow on
-Python 3.11+, which has no supported-Python wheel and would fail. Stemmy only needs the bundled ONNX
-model plus `onnxruntime`, so the installer adds just the light runtime deps it actually uses (`librosa`,
-`scikit-learn`, `onnxruntime`, `pretty_midi`, `resampy`, and friends).
+Python 3.11+, which has no Windows/py3.12 wheel and would fail; Stemmy only needs the bundled ONNX
+model plus `onnxruntime`, so the installer adds just the light runtime deps.
 
 ## Karaoke mode (playlist batch)
 
@@ -240,10 +239,11 @@ the rights to.
 
 ## Extended depth (53-stem, experimental)
 
-> **Status: works in theory, unverified on this hardware.** Extended is wired end-to-end and
-> validated against stand-in tests, but it has **not** been confirmed to produce good separation
-> on the author's 16 GB laptop: it runs the whole song through the model in one pass and **ran
-> out of RAM before finishing**. Treat it as experimental.
+> **Status: working, but heavy.** Extended is wired end-to-end and produces the full multi-instrument
+> split. It is still marked experimental because separation quality on many instruments is model-limited
+> and it is far more resource-hungry than the other depths. It now picks its run mode automatically
+> (full-length when there is enough RAM, chunked when there is not) and falls back gracefully if a
+> full-length pass runs short on memory, so you get stems instead of nothing.
 
 audio-separator's catalog tops out at the 6 Demucs stems plus the drum split. To pull out **synth,
 organ, strings, brass, winds, keys, percussion, kick, snare, toms, hi-hat** and dozens more, Stemmy
@@ -257,16 +257,19 @@ downloads the model config + checkpoint (~2 GB) into `models_cache/msst_models/`
 `manifest.json`. Re-running only repairs what's broken. Once installed, the **Extended** card shows
 "ready"; otherwise it says *"Needs MSST"* and the pass skips cleanly.
 
-**It runs full-length, and that's the catch.** These big multi-stem models separate far better with
-the whole song in view, so Stemmy runs Extended full-length (no chunking). The model assembles its
-entire output as one large array, so a 4-minute song needs roughly **12–16 GB of free RAM** (more
-for longer tracks):
+**RAM is the catch.** These big multi-stem models separate far better with the whole song in view, so
+Stemmy prefers to run Extended full-length. The model assembles its entire output as one large array,
+so a 4-minute song needs roughly **12 to 16 GB of free RAM** (more for longer tracks). Stemmy now
+handles this automatically:
 
-- **16 GB total is not enough** with a browser or OneDrive open: it will OOM, and that's expected.
-- **32 GB is comfortable; 64 GB for long tracks.**
-- If Extended is skipped with an out-of-memory note, it **fails gracefully**: the rest of the run is
-  unaffected. Close other apps and retry, use a shorter clip, or set `STEMMY_MSST_FULL=0` to fall
-  back to chunked processing (bounded RAM, but the model smears sound into fewer stems).
+- **Enough RAM:** it runs full-length for the best separation.
+- **Short on RAM:** it slices the song into overlapping segments (chunked), runs the model on each, and
+  crossfade-stitches them back together. This bounds memory use but separates a little less cleanly.
+- **A full-length pass that runs out of memory** is caught and retried in chunked mode automatically, so
+  you still get stems rather than a silent result. If even that fails, the pass reports a clear
+  out-of-memory note and the rest of the run is unaffected.
+- You can force a mode with an environment variable: `STEMMY_MSST_FULL=1` (always full-length) or
+  `STEMMY_MSST_FULL=0` (always chunked). **32 GB is comfortable; 64 GB for long tracks.**
 
 **Two things it cannot do** (asked often enough to spell out):
 
@@ -349,8 +352,8 @@ models_cache/   downloaded weights (gitignored)
 The Windows `.bat` launchers (`install_all`, `setup`, `run`, `stop`, `check_gpu`, `check_models`,
 `fix_gpu`, `get_msst`, `get_tabs`, `get_lyrics`, `update_ytdlp`) are kept local and **gitignored**.
 Their full contents and what each does are documented in **[BUILD.md](BUILD.md)** so anyone who clones
-the repo can recreate them. **`install_all.bat`** is the one-shot option that runs the whole install
-in a single self-contained script.
+the repo can recreate them. **`install_all.bat`** is the one-shot option that runs the whole install in
+a single self-contained script.
 
 This is a Flask **dev** server, fine for local single-user use. Put a real WSGI server in front if
 you ever expose it.
