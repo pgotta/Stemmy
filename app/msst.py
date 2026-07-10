@@ -6,12 +6,19 @@ the model in models_cache/msst_models/ with a manifest.json. We shell out to
 MSST's own inference.py.
 
 Memory: a 53-stem model assembles its whole output as one (53, 2, N) float array.
-For a full song that's ~5 GB plus several 1+ GB temporaries — so full-length runs
-are RAM-heavy (plan on ~12-16 GB free; 32 GB+ comfortable). We run full-length by
-default anyway, because these models separate far better with the whole song in
-view; chunking smears everything into a few stems. If RAM is tight, set
-STEMMY_MSST_FULL=0 to fall back to overlapping ~12 s segments that are stitched
-back together (bounded RAM, weaker separation).
+For a full song that's several GB plus temporaries, so full-length runs are
+RAM-heavy (plan on ~12-16 GB free; 32 GB+ comfortable). We prefer full-length
+because these models separate far better with the whole song in view, but we now
+pick the mode automatically:
+
+  * enough free RAM  -> full-length (best quality);
+  * clearly short    -> chunked (overlapping ~12 s segments, stitched back);
+  * full-length that OOMs or writes nothing -> auto-retry chunked so the user
+    still gets stems instead of a lone metronome.
+
+Override with STEMMY_MSST_FULL=1 (always full) or =0 (always chunked). If even the
+chunked retry produces nothing, separate() raises so the pass reports a clear
+failure rather than silently returning an empty result.
 
 Everything degrades gracefully: not installed -> is_installed() False and the pass
 skips; a crash mid-run -> separate() raises and the pass skips. Never breaks a run.
@@ -167,9 +174,50 @@ def _run_inference(root: Path, mm: Path, man: dict, in_dir: Path, store: Path,
         "--input_folder", str(in_dir),
         "--store_dir", str(store),
         "--filename_template", template,
-        "--pcm_type", "PCM_16",          # half the disk of float, still clean
+        # Force real .wav output. Recent MSST writes .flac whenever pcm_type is
+        # PCM_16/PCM_24 and the peak is <=1.0 (i.e. almost always), which broke
+        # Stemmy's .wav collection and left users with only a metronome. FLOAT
+        # keeps it .wav (32-bit float, clean, soundfile reads it directly).
+        "--pcm_type", "FLOAT",
     ]
-    subprocess.run(cmd, check=True, cwd=str(root), timeout=timeout)
+    # Capture output so an out-of-memory / CUDA error is surfaced instead of
+    # vanishing. On Windows a memory-starved process can also be killed by the
+    # OS (non-zero rc) - check=True turns that into an exception we can catch.
+    print("[MSST] running inference:", " ".join(str(c) for c in cmd), flush=True)
+    proc = subprocess.run(cmd, cwd=str(root), timeout=timeout,
+                          capture_output=True, text=True)
+    out_tail = ((proc.stdout or "").strip().splitlines() or [""])[-8:]
+    err_tail = ((proc.stderr or "").strip().splitlines() or [""])[-12:]
+    if out_tail and any(out_tail):
+        print("[MSST] inference stdout (tail):\n  " + "\n  ".join(out_tail), flush=True)
+    if err_tail and any(err_tail):
+        print("[MSST] inference stderr (tail):\n  " + "\n  ".join(err_tail), flush=True)
+    wrote = _count_out(store)
+    print(f"[MSST] inference exit={proc.returncode}, wrote {wrote} wav file(s) to {store}", flush=True)
+    if proc.returncode != 0:
+        tail = ((proc.stderr or "") + (proc.stdout or "")).strip().splitlines()
+        hint = tail[-1][:200] if tail else f"exit code {proc.returncode}"
+        raise RuntimeError("MSST inference failed: " + hint)
+
+
+# MSST may write .wav OR .flac (its inference picks flac for peak<=1.0 unless
+# pcm_type is FLOAT) or .mp3. soundfile reads all of them, so we accept any.
+_OUT_EXTS = (".wav", ".flac", ".mp3")
+
+
+def _find_out(folder: Path, recursive: bool = False):
+    """All audio stem files MSST wrote, any supported extension, sorted."""
+    files = []
+    it = folder.rglob("*") if recursive else folder.glob("*")
+    for f in it:
+        if f.is_file() and f.suffix.lower() in _OUT_EXTS:
+            files.append(f)
+    return sorted(files)
+
+
+def _count_out(store: Path) -> int:
+    """How many stem files the run actually produced (any codec, flat or nested)."""
+    return len(_find_out(store)) + len(_find_out(store, recursive=True))
 
 
 def _instr_from_name(name: str, base: str | None = None) -> str:
@@ -222,20 +270,48 @@ def separate(input_wav: str, out_dir: str, model_dir: str,
             sf.write(str(dst), data, sr2)
         except Exception:
             shutil.copy(input_wav, in_dir / Path(input_wav).name)
+        print(f"[MSST] input={input_wav!r} dur={duration:.0f}s (short) -> single pass", flush=True)
         _run_inference(root, mm, man, in_dir, store, "{instr}", python_exe, timeout)
         produced = {}
-        files = list(store.glob("*.wav")) or list(store.rglob("*.wav"))
+        files = _find_out(store) or _find_out(store, recursive=True)
         base = Path(input_wav).stem
         for f in sorted(files):
             produced[_instr_from_name(f.stem, base)] = str(f)
+        if not produced:
+            raise RuntimeError("MSST produced no stems for this clip "
+                               "(check the [MSST] inference output above).")
+        print(f"[MSST] produced {len(produced)} stems", flush=True)
         return produced
 
-    # ---- whole-song single pass by default (best separation) ----
-    # Chunking degrades these big multi-stem models (they need the whole song in
-    # view), so it's no longer automatic — it's an explicit low-RAM opt-out via
-    # STEMMY_MSST_FULL=0. Default is full-length regardless of available RAM.
-    force = os.environ.get("STEMMY_MSST_FULL")   # "0" -> chunk (low RAM); anything else -> full
-    do_full = (force != "0")
+    # ---- choose full-length vs chunked -------------------------------------
+    # Full-length separates best, but the 53-stem output array is what OOMs on
+    # smaller machines. Previously full-length was forced regardless of RAM, so a
+    # memory-starved run could finish having written nothing (or get OS-killed)
+    # and the pipeline saw an empty result -> only the metronome survived. Now:
+    #   * STEMMY_MSST_FULL=1  -> always full-length
+    #   * STEMMY_MSST_FULL=0  -> always chunked (bounded RAM)
+    #   * unset (default)     -> full-length, but auto-fall-back to chunked if we
+    #                            clearly lack RAM, or if full-length yields nothing.
+    force = os.environ.get("STEMMY_MSST_FULL")
+    ram = _avail_ram_gb()
+    # rough need for the (num_stems, 2, N) output array plus temporaries. We only
+    # pre-emptively chunk when RAM is CLEARLY short (well under the estimate); on
+    # a borderline machine we still try full-length (better quality) and let the
+    # empty-output/OOM fallback below drop to chunked if it actually fails. This
+    # avoids needlessly chunking a capable GPU box just because a browser is open.
+    need_gb = 3.0 + 2.2 * (duration / 60.0)
+    ram_ok = (ram is None) or (ram >= need_gb * 0.6)
+
+    if force == "0":
+        do_full = False
+    elif force == "1":
+        do_full = True
+    else:
+        do_full = ram_ok      # default: full unless RAM is clearly short
+
+    print(f"[MSST] input={input_wav!r} dur={duration:.0f}s sr={sr} "
+          f"avail_ram={('%.1f' % ram) if ram else '?'}GB need~{need_gb:.0f}GB "
+          f"-> mode={'full' if do_full else 'chunked'}", flush=True)
 
     if do_full:
         import soundfile as sf
@@ -245,17 +321,63 @@ def separate(input_wav: str, out_dir: str, model_dir: str,
             sf.write(str(dst), data, sr2); del data
         except Exception:
             shutil.copy(input_wav, in_dir / Path(input_wav).name)
-        _run_inference(root, mm, man, in_dir, store, "{instr}", python_exe, timeout)
         produced = {}
-        base = Path(input_wav).stem
-        for f in sorted(list(store.glob("*.wav")) or list(store.rglob("*.wav"))):
-            produced[_instr_from_name(f.stem, base)] = str(f)
-        shutil.rmtree(in_dir, ignore_errors=True)
+        try:
+            _run_inference(root, mm, man, in_dir, store, "{instr}", python_exe, timeout)
+            base = Path(input_wav).stem
+            for f in (_find_out(store) or _find_out(store, recursive=True)):
+                produced[_instr_from_name(f.stem, base)] = str(f)
+        except Exception as e:
+            # OOM / OS-kill / crash: don't give up - fall back to chunked, which
+            # bounds RAM. Re-raise only if the fallback also fails (below).
+            print("[MSST] full-length raised:", str(e).splitlines()[0][:160], flush=True)
+            produced = {}
+            _full_err = e
+        else:
+            _full_err = None
+
+        if produced:
+            print(f"[MSST] full-length produced {len(produced)} stems: "
+                  + ", ".join(sorted(produced)[:12])
+                  + (" ..." if len(produced) > 12 else ""), flush=True)
+            shutil.rmtree(in_dir, ignore_errors=True)
+            return produced
+
+        # full-length produced nothing (empty output or it raised). Retry chunked
+        # so the user gets *something* instead of a lone metronome.
+        print("[MSST] full-length produced no stems; retrying in low-RAM chunked mode ...", flush=True)
+        for d in (in_dir, store):
+            shutil.rmtree(d, ignore_errors=True)
+            d.mkdir(parents=True, exist_ok=True)
+        produced = _separate_chunked(input_wav, root, mm, man, in_dir, store,
+                                     python_exe, timeout, chunk_s, overlap_s)
+        if not produced:
+            raise RuntimeError(
+                "MSST produced no stems even after a low-RAM retry"
+                + (": " + str(_full_err).splitlines()[0][:120] if _full_err else "")
+                + ". This song likely needs more free RAM (~12-16 GB); close "
+                  "other apps or try a shorter clip.")
+        print(f"[MSST] chunked recovery produced {len(produced)} stems", flush=True)
         return produced
 
-    # ---- long input + tight RAM: slice -> one MSST call -> crossfade-stitch ----
+    # ---- explicit / auto low-RAM path: chunked ----
+    produced = _separate_chunked(input_wav, root, mm, man, in_dir, store,
+                                 python_exe, timeout, chunk_s, overlap_s)
+    print(f"[MSST] chunked produced {len(produced)} stems: "
+          + ", ".join(sorted(produced)[:12])
+          + (" ..." if len(produced) > 12 else ""), flush=True)
+    if not produced:
+        raise RuntimeError("MSST produced no stems (chunked run wrote nothing).")
+    return produced
+
+
+def _separate_chunked(input_wav, root, mm, man, in_dir, store,
+                      python_exe, timeout, chunk_s, overlap_s) -> dict:
+    """Slice the input into overlapping segments, run MSST once over all of them,
+    then crossfade-stitch each instrument back together. Bounds peak RAM."""
     import numpy as np
     import soundfile as sf
+    import gc
 
     data, sr = _read_audio(input_wav)          # input is small (~tens of MB)
     N = data.shape[0]
@@ -281,7 +403,6 @@ def separate(input_wav: str, out_dir: str, model_dir: str,
 
     _run_inference(root, mm, man, in_dir, store, "{file_name}/{instr}",
                    python_exe, timeout)
-    import gc
     gc.collect()
 
     # map each segment index -> its output folder + sample length (for zero-fill)
@@ -292,11 +413,12 @@ def separate(input_wav: str, out_dir: str, model_dir: str,
     if not any(d for d, _ in seg_info):
         # template ignored / nothing nested -> return whatever got written flat
         produced = {}
-        for f in sorted(store.rglob("*.wav")):
+        for f in _find_out(store, recursive=True):
             produced[_instr_from_name(f.stem)] = str(f)
         return produced
-    # instruments = union across all segments (don't trust just the first)
-    instruments = sorted({f.stem for d, _ in seg_info if d for f in d.glob("*.wav")})
+    # instruments = union across all segments (don't trust just the first).
+    # map instrument name -> its actual filename in each segment dir (any codec).
+    instruments = sorted({f.stem for d, _ in seg_info if d for f in _find_out(d)})
 
     KEEP = 1e-4   # keep anything that isn't pure digital silence; UI slider hides quiet ones
     produced: dict[str, str] = {}
@@ -305,13 +427,14 @@ def separate(input_wav: str, out_dir: str, model_dir: str,
         """Read one segment's stem, or return zeros of the right length if the
         file is missing/unreadable — so one bad segment never drops a stem."""
         if d is not None:
-            p = d / f"{instr}.wav"
-            if p.exists():
-                try:
-                    seg, _ = sf.read(str(p), always_2d=True, dtype="float32")
-                    return seg
-                except Exception:
-                    pass
+            for ext in _OUT_EXTS:
+                p = d / f"{instr}{ext}"
+                if p.exists():
+                    try:
+                        seg, _ = sf.read(str(p), always_2d=True, dtype="float32")
+                        return seg
+                    except Exception:
+                        pass
         return np.zeros((length, 2), dtype="float32")
 
     for instr in instruments:

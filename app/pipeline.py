@@ -164,15 +164,15 @@ class Pipeline:
                               note=f"skipped — no {p.source} input")
                     continue
                 self._set(data, p.key, "run", 20, emit,
-                          note="running MSST full-length (slow · RAM-heavy)")
+                          note="running MSST (auto full-length / low-RAM chunked · slow)")
                 try:
                     produced = msst.separate(src, str(work / "msst"), self.model_dir)
                 except Exception as e:
                     self._set(data, p.key, "done", 100, emit,
-                              note="skipped — MSST failed (likely out of RAM; "
-                                   "needs ~12–16 GB free. Close apps or set "
-                                   "STEMMY_MSST_FULL=0): "
-                                   + str(e).splitlines()[0][:60])
+                              note="skipped — MSST couldn't produce stems "
+                                   "(tried full-length then low-RAM chunked). "
+                                   "Free more RAM (~12–16 GB) or use a shorter "
+                                   "clip: " + str(e).splitlines()[0][:70])
                     continue
                 kept = 0
                 for stem_id, path in produced.items():
@@ -183,7 +183,19 @@ class Pipeline:
                     rel = f"stems/{stem_id}.wav"
                     dest = pdir / rel
                     dest.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.move(path, dest)
+                    # MSST should emit .wav (we pass --pcm_type FLOAT), but if a
+                    # build ever writes .flac/.mp3, transcode so the file is a
+                    # real WAV, not FLAC bytes with a .wav name (won't play).
+                    if Path(path).suffix.lower() == ".wav":
+                        shutil.move(path, dest)
+                    else:
+                        try:
+                            import soundfile as sf
+                            audio, srate = sf.read(path, always_2d=True)
+                            sf.write(str(dest), audio, srate)
+                            Path(path).unlink(missing_ok=True)
+                        except Exception:
+                            shutil.move(path, dest)   # last resort
                     meta = dict(models.STEM_META.get(
                         stem_id, {"name": stem_id.replace("-", " ").replace("_", " ").title(),
                                   "type": "keys", "clr": "#5eead4"}))
@@ -200,8 +212,18 @@ class Pipeline:
                     sources[stem_id] = str(dest)
                     kept += 1
                 data["stems"] = list(stem_index.values())
-                self._set(data, p.key, "done", 100, emit,
-                          note=f"{kept} instrument stems")
+                print(f"[MSST] pipeline received {len(produced)} stems, kept {kept} "
+                      f"after silence check", flush=True)
+                if kept == 0:
+                    # separate() only returns non-silent stems, so 0 kept here
+                    # means every file failed the re-read/silence check - flag it
+                    # rather than quietly leaving the user with just a metronome.
+                    self._set(data, p.key, "done", 100, emit,
+                              note="skipped — MSST produced no usable stems "
+                                   "(likely low RAM; needs ~12–16 GB free)")
+                else:
+                    self._set(data, p.key, "done", 100, emit,
+                              note=f"{kept} instrument stems")
                 continue
 
             # no model wired (e.g. experimental guitar split) -> skip cleanly
