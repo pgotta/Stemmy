@@ -6,7 +6,9 @@ to remove or revise and avoids coupling it to the large, carefully tuned studio 
 
 from __future__ import annotations
 
-from flask import Flask
+from pathlib import Path
+
+from flask import Flask, Response
 
 
 _CSS_TAG = (
@@ -14,13 +16,25 @@ _CSS_TAG = (
     'data-stemmy-tools="css">'
 )
 _JS_TAG = (
-    '<script src="/static/stemmy-tools.js?v=1" defer '
+    '<script src="/stemmy-tools.js?v=1" defer '
     'data-stemmy-tools="js"></script>'
 )
 
 
 def install_tools(app: Flask) -> Flask:
     """Attach the tuner/chord-creator UI to HTML responses exactly once."""
+
+    parts_dir = Path(__file__).resolve().parent / "static" / "stemmy-tools"
+
+    @app.get("/stemmy-tools.js")
+    def _stemmy_tools_bundle():
+        parts = sorted(parts_dir.glob("part-*.js"))
+        source = "\n".join(part.read_text(encoding="utf-8") for part in parts)
+        return Response(
+            source,
+            content_type="application/javascript; charset=utf-8",
+            headers={"Cache-Control": "no-cache"},
+        )
 
     @app.after_request
     def _inject_musician_tools(response):
