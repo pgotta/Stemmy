@@ -1,4 +1,4 @@
-# Stemmy v1.5
+# Stemmy
 
 A local, GPU-accelerated **stem-separation studio for Windows**. Drop in a song or paste a YouTube link, separate it into vocals, bass, drums and sub-drums, guitar, piano, keys, and other stems, then mix, practice, identify songs, display lyrics, generate chords, tune an instrument, and export the results.
 
