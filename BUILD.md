@@ -10,7 +10,7 @@ The repository contains the application source. Some Windows convenience launche
 
 Use one of these:
 
-- `install_all.bat` — installs the core environment plus optional song ID, MIDI/tab support, and Extended separation.
+- `install_all.bat` — installs the core environment plus optional helpers, verifies CUDA last, and automatically creates or refreshes the Stemmy desktop shortcut and icon.
 - `setup.bat` — installs the core environment only.
 
 Use Python **3.10–3.13**; Python 3.12 is the most thoroughly tested.
@@ -34,7 +34,7 @@ Do **not** run setup again unless the update explicitly says dependencies change
 
 ### Everyday launch
 
-Run `run.bat` or use the desktop shortcut created by `Create Stemmy Shortcut.bat`.
+Run `run.bat` or use the desktop shortcut created automatically by `install_all.bat`.
 
 The launcher:
 
@@ -43,18 +43,32 @@ The launcher:
 - Redirects output to `logs/`.
 - Applies Windows process priority/high-QoS handling to Stemmy Python processes.
 - Waits for the local server to respond.
-- Opens `http://127.0.0.1:5002` in an Edge/Chrome app window when possible.
+- Opens `http://127.0.0.1:5002` in a dedicated maximized Edge/Chrome app window when possible.
+- Explicitly maximizes the newest Stemmy browser window so Chromium cannot restore an older windowed size.
 - Monitors that window and stops the server when it closes.
+
+## Current `install_all.bat` behavior
+
+The packaged installer is safe to re-run. It:
+
+1. Creates or reuses `.venv`.
+2. Installs/repairs `requirements.txt`.
+3. Updates `yt-dlp` and `imageio-ffmpeg`.
+4. Installs ShazamIO and MIDI/Tab runtime support where possible.
+5. Verifies or reinstalls the CUDA 12.8 PyTorch build **last**, preventing another package from replacing it with CPU-only PyTorch.
+6. Creates or refreshes the desktop Stemmy shortcut and assigns `stemmy.ico`.
+
+The optional Extended/MSST model remains a separate large download when `get_msst.bat` is present. Quick, Standard, and Deep do not depend on it.
 
 ## App-style desktop shortcut
 
-Run this once:
+`install_all.bat` creates or refreshes `Stemmy.lnk` on the desktop with `stemmy.ico` automatically.
+
+To repair or recreate the shortcut without reinstalling anything, run:
 
 ```text
 Create Stemmy Shortcut.bat
 ```
-
-It creates `Stemmy.lnk` on the desktop with `stemmy.ico`.
 
 The shortcut launches `stemmy_launcher.vbs`, which starts `run.bat` without showing a command window. This is the preferred app-like entry point.
 
@@ -77,12 +91,12 @@ Your projects and finished Karaoke sessions remain saved on disk.
 |---|---|
 | `run.bat` | Main Windows launcher |
 | `run_stemmy.py` | Starts the Flask application |
-| `stemmy_window.ps1` | Opens and watches the dedicated browser app window |
+| `stemmy_window.ps1` | Opens, maximizes, and watches the dedicated browser app window |
 | `stemmy_windows_performance.py` | Applies priority/high-QoS protection to Stemmy Python processes |
 | `sitecustomize.py` | Early Python startup safeguards |
 | `stemmy_launcher.vbs` | Hidden entry point used by the desktop shortcut |
 | `stemmy.ico` | Multi-resolution Windows icon |
-| `Create Stemmy Shortcut.bat` | One-click shortcut creator |
+| `Create Stemmy Shortcut.bat` | Manual shortcut repair/refresh tool |
 | `create_stemmy_shortcut.ps1` | Creates and configures `Stemmy.lnk` |
 | `stop.bat` | Emergency port/process shutdown |
 
