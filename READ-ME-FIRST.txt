@@ -1,0 +1,36 @@
+STEMMY v1.5 COMPLETE WINDOWS PACKAGE
+====================================
+
+This is the complete Stemmy v1.5 source and Windows launcher package.
+It is not a small overlay.
+
+CLEAN INSTALL
+-------------
+1. Extract all files into a new folder.
+2. Double-click install_all.bat.
+3. Wait for the final successful-installation message.
+4. Launch Stemmy from the desktop shortcut it creates.
+
+UPGRADE FROM v1.1 OR REPAIR AN EXISTING INSTALLATION
+----------------------------------------------------
+1. Close Stemmy.
+2. Back up projects and karaoke_jobs when they contain work you need.
+3. Extract v1.5 over the existing Stemmy folder and replace files.
+4. Run Repair Stemmy Installation.bat.
+5. Launch from the refreshed desktop shortcut.
+
+The repair keeps the existing .venv whenever possible. It downloads the large
+PyTorch package only when the installed CUDA stack is missing or incompatible.
+
+TESTED STACK
+-------------
+Python 3.12.10
+PyTorch 2.11.0+cu128
+TorchVision 0.26.0+cu128
+TorchAudio 2.11.0+cu128
+NVIDIA GeForce RTX 5060 Laptop GPU
+
+Quick, Standard and Deep are included. Extended remains optional; run
+get_msst.bat after the main installation to download its separate large model.
+
+See README.md, BUILD.md and RELEASE_NOTES.md for complete details.

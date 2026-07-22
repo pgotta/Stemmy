@@ -1,0 +1,291 @@
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+cd /d "%~dp0"
+title Stemmy v1.5 - Complete Install
+
+echo ==========================================================
+echo   Stemmy v1.5 - Complete Install / Repair
+echo ==========================================================
+echo.
+echo This installs or repairs:
+echo   - Complete Stemmy application source
+echo   - Core Python environment and separation engine
+echo   - Matched CUDA PyTorch / TorchVision / TorchAudio stack
+echo   - YouTube downloader and FFmpeg helper
+echo   - Shazam song identification and lyrics support
+echo   - MIDI / Tab support
+echo   - Background GPU protection for minimized/unfocused use
+echo   - Maximized application window, icon and desktop shortcut
+echo.
+echo Existing working components are kept whenever possible.
+echo.
+
+REM ========================================================================
+REM 0. COMPLETE SOURCE PREFLIGHT -- MUST PASS BEFORE INSTALLING ANYTHING
+REM ========================================================================
+echo [0/8] Verifying complete Stemmy source package ...
+set "SOURCE_MISSING="
+
+for %%F in (
+  "requirements.txt"
+  "run_stemmy.py"
+  "app\__init__.py"
+  "app\server.py"
+  "app\pipeline.py"
+  "app\projects.py"
+  "app\models.py"
+  "app\analysis.py"
+  "app\karaoke.py"
+  "app\mixdown.py"
+  "app\youtube.py"
+  "app\tabs.py"
+  "app\templates\index.html"
+  "app\static\vendor\butterchurn.min.js"
+  "app\static\vendor\butterchurnPresets.min.js"
+  "app\static\stemmy-tools\part-01.js"
+  "sitecustomize.py"
+  "stemmy_windows_performance.py"
+  "stemmy_window.ps1"
+) do (
+  if not exist "%%~F" (
+    echo   [MISSING] %%~F
+    set "SOURCE_MISSING=1"
+  )
+)
+
+if defined SOURCE_MISSING (
+  echo.
+  echo [X] This folder is not a complete Stemmy package.
+  echo     Nothing was installed or changed.
+  echo.
+  echo     Extract the COMPLETE Stemmy ZIP into an empty folder and run
+  echo     install_all.bat from that folder.
+  echo.
+  pause
+  exit /b 1
+)
+echo   Complete source package verified.
+echo.
+
+set "FAILED="
+set "PY="
+
+REM Prefer Python 3.12 because it is the version Stemmy is tested on.
+for %%V in (3.12 3.13 3.11 3.10) do (
+  if not defined PY (
+    py -%%V -c "import sys" >nul 2>&1 && set "PY=py -%%V"
+  )
+)
+if not defined PY (
+  where python >nul 2>&1 && set "PY=python"
+)
+if not defined PY (
+  echo [X] Python was not found. Install Python 3.12 and run this again.
+  pause
+  exit /b 1
+)
+
+for /f "delims=" %%V in ('%PY% --version 2^>^&1') do echo Detected %%V
+%PY% -c "import sys; raise SystemExit(0 if sys.version_info[:2] in ((3,10),(3,11),(3,12),(3,13)) else 1)" >nul 2>&1
+if errorlevel 1 (
+  echo [X] Stemmy requires Python 3.10 through 3.13.
+  echo     Python 3.12 is recommended.
+  pause
+  exit /b 1
+)
+
+REM ========================================================================
+REM 1. VIRTUAL ENVIRONMENT
+REM ========================================================================
+if not exist ".venv\Scripts\python.exe" (
+  echo.
+  echo [1/8] Creating .venv ...
+  %PY% -m venv .venv
+  if errorlevel 1 goto :fatal_venv
+) else (
+  echo.
+  echo [1/8] Existing .venv found - repairing it in place.
+)
+
+call ".venv\Scripts\activate.bat"
+if errorlevel 1 goto :fatal_venv
+
+python -m pip install --upgrade pip wheel "setuptools<82"
+if errorlevel 1 goto :fatal_pip
+
+REM ========================================================================
+REM 2. CORE REQUIREMENTS -- FAILURE IS FATAL
+REM ========================================================================
+echo.
+echo [2/8] Installing complete Stemmy requirements ...
+python -m pip install -r requirements.txt
+if errorlevel 1 goto :fatal_requirements
+
+echo.
+echo Verifying core Stemmy imports ...
+python -c "import flask, audio_separator, librosa, soundfile, numpy, psutil; from app.server import create_app; print('  Core Stemmy environment ready.')"
+if errorlevel 1 goto :fatal_core
+
+REM ========================================================================
+REM 3. INTERNET-FACING HELPERS
+REM ========================================================================
+echo.
+echo [3/8] Updating YouTube and FFmpeg helpers ...
+python -m pip install --upgrade yt-dlp imageio-ffmpeg
+if errorlevel 1 set "FAILED=!FAILED! online-helpers"
+
+REM ========================================================================
+REM 4. SHAZAM
+REM ========================================================================
+echo.
+echo [4/8] Installing Shazam song identification ...
+python -m pip install shazamio
+if errorlevel 1 (
+  set "FAILED=!FAILED! shazamio"
+) else (
+  python -c "import sys; raise SystemExit(0 if sys.version_info[:2] >= (3,13) else 1)" >nul 2>&1
+  if not errorlevel 1 python -m pip install audioop-lts
+  python -c "from shazamio import Shazam; print('  ShazamIO ready.')"
+  if errorlevel 1 set "FAILED=!FAILED! shazamio-import"
+)
+
+REM ========================================================================
+REM 5. CUDA PYTORCH + MATCHING TORCHVISION / TORCHAUDIO
+REM ========================================================================
+echo.
+echo [5/8] Verifying the matched CUDA PyTorch stack ...
+
+REM Exact official pairing for PyTorch 2.11:
+REM   torch 2.11.0 + torchvision 0.26.0 + torchaudio 2.11.0
+python -c "import torch,torchaudio,torchvision,sys; ok=torch.cuda.is_available() and torch.__version__.startswith('2.11.0+') and torchaudio.__version__.startswith('2.11.0+') and torchvision.__version__.startswith('0.26.0+'); raise SystemExit(0 if ok else 1)" >nul 2>&1
+if errorlevel 1 (
+  REM Avoid downloading the 2.8 GB torch wheel again when only torchvision is mismatched.
+  python -c "import torch,torchaudio,sys; ok=torch.cuda.is_available() and torch.__version__.startswith('2.11.0+') and torchaudio.__version__.startswith('2.11.0+'); raise SystemExit(0 if ok else 1)" >nul 2>&1
+  if errorlevel 1 (
+    echo   Installing the complete matched CUDA 12.8 stack ...
+    python -m pip install --force-reinstall --no-cache-dir "torch==2.11.0" "torchvision==0.26.0" "torchaudio==2.11.0" --index-url https://download.pytorch.org/whl/cu128
+    if errorlevel 1 goto :fatal_cuda
+  ) else (
+    echo   PyTorch and torchaudio are correct; repairing torchvision only ...
+    python -m pip install --force-reinstall --no-deps "torchvision==0.26.0" --index-url https://download.pytorch.org/whl/cu128
+    if errorlevel 1 goto :fatal_cuda
+  )
+) else (
+  echo   Matched CUDA PyTorch stack is already active.
+)
+
+python -c "import torch as t, torchaudio as ta, torchvision as tv; ok=t.cuda.is_available(); print('  PyTorch:',t.__version__); print('  TorchVision:',tv.__version__); print('  TorchAudio:',ta.__version__); print('  CUDA:',ok); print('  GPU:',t.cuda.get_device_name(0) if ok else 'CPU only'); raise SystemExit(0 if ok and t.__version__.startswith('2.11.0+') and tv.__version__.startswith('0.26.0+') and ta.__version__.startswith('2.11.0+') else 1)"
+if errorlevel 1 goto :fatal_cuda
+
+REM ========================================================================
+REM 6. MIDI / TAB -- USE THE EXISTING ONNXRUNTIME-GPU
+REM ========================================================================
+echo.
+echo [6/8] Installing MIDI / Tab support ...
+
+REM audio-separator already installed onnxruntime-gpu. Do NOT install the
+REM separate CPU onnxruntime package over it; both provide the same module.
+python -m pip install "pretty_midi>=0.2.9" "resampy>=0.4,<0.5" "mir_eval>=0.6" "importlib-resources>=5"
+if errorlevel 1 set "FAILED=!FAILED! tab-runtime"
+
+REM Install Basic Pitch without its TensorFlow metadata dependencies. Stemmy
+REM deliberately uses its bundled ONNX model instead.
+python -m pip install --force-reinstall --no-deps "basic-pitch==0.4.0"
+if errorlevel 1 (
+  set "FAILED=!FAILED! basic-pitch"
+) else (
+  echo   Testing the actual bundled ONNX model ...
+  python -c "from pathlib import Path; import onnxruntime as ort; from basic_pitch.inference import Model,predict; from app.tabs import _onnx_model_path; p=_onnx_model_path(); assert p and Path(p).is_file(), 'Basic Pitch ONNX model was not found'; Model(p); print('  MIDI / Tab ONNX runtime ready.'); print('  ONNX providers:',ort.get_available_providers())"
+  if errorlevel 1 (
+    echo   [!] MIDI / Tab ONNX compatibility check failed. Core Stemmy is unaffected.
+    set "FAILED=!FAILED! tab-check"
+  )
+)
+
+REM Recheck core imports after all package changes.
+python -c "import flask, audio_separator, librosa, soundfile, numpy, psutil, torch, torchvision; from app import create_app; app=create_app(); print('  Complete Stemmy startup import check passed.')"
+if errorlevel 1 goto :fatal_core
+
+REM ========================================================================
+REM 7. BACKGROUND GPU PROTECTION
+REM ========================================================================
+echo.
+echo [7/8] Verifying background GPU protection ...
+set "PYTHONPATH=%CD%;%PYTHONPATH%"
+python -c "from stemmy_windows_performance import apply_windows_performance_policy as a; s=a(); print('  High priority:',s.get('high_priority','already applied')); print('  HighQoS:',s.get('high_qos','already applied')); raise SystemExit(0 if s.get('applied') else 1)"
+if errorlevel 1 (
+  echo   [!] Background GPU protection self-check failed.
+  set "FAILED=!FAILED! gpu-background-fix"
+) else (
+  echo   Background GPU protection is active.
+)
+
+REM ========================================================================
+REM 8. DESKTOP SHORTCUT -- ONLY AFTER CORE APP PASSED
+REM ========================================================================
+echo.
+echo [8/8] Creating Stemmy desktop shortcut ...
+if not exist "stemmy.ico" goto :fatal_shortcut
+if not exist "stemmy_launcher.vbs" goto :fatal_shortcut
+if not exist "create_stemmy_shortcut.ps1" goto :fatal_shortcut
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%CD%\create_stemmy_shortcut.ps1" -Root "%CD%"
+if errorlevel 1 goto :fatal_shortcut
+
+echo.
+echo ==========================================================
+if defined FAILED (
+  echo   Stemmy core installation completed with optional warnings:
+  echo   !FAILED!
+  echo.
+  echo   Stem separation and the main studio passed verification.
+) else (
+  echo   Stemmy installation completed successfully.
+)
+echo.
+echo   Launch Stemmy from the new desktop icon.
+echo ==========================================================
+echo.
+pause
+exit /b 0
+
+:fatal_venv
+echo.
+echo [X] Could not create or activate the Python environment.
+goto :fatal
+
+:fatal_pip
+echo.
+echo [X] pip/setuptools could not be installed.
+goto :fatal
+
+:fatal_requirements
+echo.
+echo [X] Core requirements failed to install.
+echo     The desktop shortcut was NOT created.
+goto :fatal
+
+:fatal_core
+echo.
+echo [X] Stemmy's core startup verification failed.
+echo     The desktop shortcut was NOT created.
+goto :fatal
+
+:fatal_cuda
+echo.
+echo [X] CUDA PyTorch could not be verified.
+echo     The desktop shortcut was NOT created.
+goto :fatal
+
+:fatal_shortcut
+echo.
+echo [X] Stemmy installed, but the desktop shortcut could not be created.
+goto :fatal
+
+:fatal
+echo.
+echo Review the error above, then run install_all.bat again.
+echo Logs created by Stemmy itself will appear under logs\ after launch.
+echo.
+pause
+exit /b 1

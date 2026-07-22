@@ -1,0 +1,110 @@
+/* Stemmy musician tools: isolated tuner + chord creator UI. */
+.st-tools-btn svg{width:15px;height:15px}
+@media (max-width:1280px){.st-tools-btn span{display:none}.st-tools-btn{padding:7px 9px}}
+
+.st-tool-stage{position:fixed;inset:0;z-index:520;display:none;flex-direction:column;background:
+  radial-gradient(900px 480px at 50% -10%,rgba(var(--green-rgb),.14),transparent 65%),#060a08;color:var(--text)}
+.st-tool-stage.show{display:flex}
+.st-tool-head{height:64px;display:flex;align-items:center;gap:14px;padding:0 22px;border-bottom:1px solid var(--line);background:rgba(10,16,12,.94);backdrop-filter:blur(10px)}
+.st-tool-head .st-title{font-size:18px;font-weight:700;letter-spacing:-.25px}
+.st-tool-head .st-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.st-tool-head .st-spacer{flex:1}
+.st-tool-close{width:38px;height:38px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,.28);color:var(--muted);font-size:16px}
+.st-tool-close:hover{color:var(--text);border-color:var(--green-dim)}
+.st-tool-scroll{flex:1;min-height:0;overflow:auto;padding:24px}
+.st-tool-grid{display:grid;grid-template-columns:minmax(260px,380px) minmax(420px,1fr);gap:20px;max-width:1400px;margin:0 auto}
+.st-panel{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,var(--panel-2),var(--panel));box-shadow:var(--shadow);overflow:hidden}
+.st-panel-h{padding:15px 17px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:10px}
+.st-panel-h h3{font-size:14px;margin:0}.st-panel-h small{color:var(--muted-2);font-size:10.5px}
+.st-panel-b{padding:17px}
+.st-field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.st-field>label,.st-field-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted-2)}
+.st-row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.st-select,.st-input{height:38px;border:1px solid var(--line);border-radius:9px;background:#090e0b;color:var(--text);padding:0 10px;font-family:inherit;outline:none}
+.st-select:focus,.st-input:focus{border-color:var(--green-dim)}
+.st-input[type=number]{width:84px}
+.st-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:0 14px;border:1px solid var(--line);border-radius:9px;background:rgba(0,0,0,.25);font-size:12.5px;font-weight:600;color:var(--text)}
+.st-button:hover{border-color:var(--green-dim)}
+.st-button.primary{background:var(--green);border-color:var(--green);color:#04140b}
+.st-button.primary:hover{background:#46ee8c}
+.st-button.danger:hover{border-color:var(--danger);color:var(--danger)}
+.st-button[disabled]{opacity:.45;cursor:not-allowed}
+.st-note{font-size:11px;line-height:1.55;color:var(--muted)}
+.st-badge{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:3px 8px;font-size:10px;color:var(--muted)}
+.st-badge.good{border-color:var(--green-dim);color:var(--green)}
+.st-switch{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);cursor:pointer}
+.st-switch input{accent-color:var(--green)}
+
+/* Tuner */
+.st-tuner-layout{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(260px,330px) minmax(440px,1fr);gap:20px}
+.st-tuner-face{min-height:520px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:34px;text-align:center;position:relative}
+.st-tuner-status{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted-2);min-height:16px}
+.st-tuner-note{font-family:var(--mono);font-size:clamp(76px,11vw,150px);line-height:.92;font-weight:700;color:var(--text);letter-spacing:-.08em;text-shadow:0 0 35px rgba(var(--green-rgb),.16);margin:14px 0 8px}
+.st-tuner-note.in-tune{color:var(--green);text-shadow:0 0 38px rgba(var(--green-rgb),.42)}
+.st-tuner-cents{font-family:var(--mono);font-size:18px;color:var(--muted);min-height:24px}
+.st-meter{width:min(620px,92%);height:88px;position:relative;margin:26px 0 14px}
+.st-meter-line{position:absolute;left:0;right:0;top:50%;height:2px;background:linear-gradient(90deg,var(--danger),var(--warn) 35%,var(--green) 50%,var(--warn) 65%,var(--danger));border-radius:2px}
+.st-meter-center{position:absolute;left:50%;top:12px;bottom:12px;width:2px;background:var(--green);opacity:.75}
+.st-meter-needle{position:absolute;left:50%;top:5px;width:3px;height:66px;background:#fff;border-radius:3px;transform-origin:50% 100%;transform:translateX(-50%) rotate(0deg);transition:transform .11s ease-out;box-shadow:0 0 10px rgba(255,255,255,.55)}
+.st-meter-labels{display:flex;justify-content:space-between;width:min(620px,92%);font:10px var(--mono);color:var(--muted-2)}
+.st-tuner-meta{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin-top:18px;font:11px var(--mono);color:var(--muted)}
+.st-level{height:7px;border-radius:5px;background:var(--line);overflow:hidden;margin-top:8px}.st-level i{display:block;width:0;height:100%;background:linear-gradient(90deg,var(--teal),var(--green));transition:width .08s}
+.st-string-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.st-string{border:1px solid var(--line);border-radius:10px;padding:10px 8px;text-align:center;background:rgba(0,0,0,.18)}
+.st-string b{display:block;font:18px var(--mono);color:var(--text)}.st-string small{font:9px var(--mono);color:var(--muted-2)}
+.st-string.active{border-color:var(--green);background:rgba(var(--green-rgb),.10);box-shadow:0 0 18px -8px var(--green)}
+.st-string.active b{color:var(--green)}
+
+/* Chord creator */
+.st-genre-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.st-genre{display:flex;align-items:center;gap:8px;padding:8px 9px;border:1px solid var(--line-soft);border-radius:9px;background:rgba(0,0,0,.13);font-size:11.5px;color:var(--muted);cursor:pointer}
+.st-genre:has(input:checked){border-color:var(--green-dim);color:var(--text);background:rgba(var(--green-rgb),.07)}
+.st-genre input{accent-color:var(--green)}
+.st-range{width:100%;accent-color:var(--green)}
+.st-results{display:flex;flex-direction:column;gap:12px}
+.st-empty{min-height:330px;display:grid;place-items:center;text-align:center;color:var(--muted-2);padding:30px}
+.st-prog{border:1px solid var(--line);border-radius:13px;background:rgba(0,0,0,.16);overflow:hidden}
+.st-prog-top{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;border-bottom:1px solid var(--line-soft)}
+.st-prog-num{width:29px;height:29px;border-radius:8px;display:grid;place-items:center;background:var(--green-deep);color:var(--green);font:12px var(--mono);flex:0 0 auto}
+.st-prog-info{min-width:0;flex:1}.st-prog-title{font-size:13.5px;font-weight:650}.st-prog-desc{font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.45}
+.st-prog-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.st-prog-body{padding:13px 14px}
+.st-chords{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.st-chord-chip{position:relative;min-width:58px;padding:10px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);font:14px var(--mono);text-align:center;color:var(--text)}
+.st-chord-chip:hover{border-color:var(--green-dim)}
+.st-chord-chip .st-cycle{display:block;font:8px var(--sans);color:var(--muted-2);margin-top:3px;text-transform:uppercase;letter-spacing:.05em}
+.st-arrow{color:var(--muted-2);font-size:11px}
+.st-prog-details{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+.st-detail{border:1px solid var(--line-soft);border-radius:8px;padding:8px 9px;background:rgba(0,0,0,.11)}
+.st-detail small{display:block;font-size:8.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-2);margin-bottom:3px}.st-detail b{font-size:10.5px;font-weight:550;color:var(--muted)}
+.st-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.st-actions .st-button{min-height:32px;padding:0 10px;font-size:10.5px}
+.st-diagrams{display:none;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-top:12px}.st-diagrams.show{display:grid}
+.st-diagram{border:1px solid var(--line-soft);border-radius:9px;padding:9px;background:rgba(0,0,0,.14)}.st-diagram h5{margin:0 0 6px;font:12px var(--mono)}
+.st-fret{font:10px/1.45 var(--mono);white-space:pre;color:var(--muted)}
+.st-faves{margin-top:14px;border-top:1px solid var(--line-soft);padding-top:13px}.st-faves h4{font-size:11px;margin:0 0 8px;color:var(--muted)}
+.st-fave-row{display:flex;gap:8px;align-items:center;padding:7px 8px;border:1px solid var(--line-soft);border-radius:8px;margin-bottom:6px;font:10.5px var(--mono);color:var(--muted)}.st-fave-row span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-toast{position:fixed;left:50%;bottom:24px;z-index:600;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#111a14;border:1px solid var(--green-dim);color:var(--text);border-radius:9px;padding:10px 14px;font-size:12px;transition:.18s}.st-toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media(max-width:900px){
+  .st-tool-scroll{padding:12px}.st-tool-grid,.st-tuner-layout{grid-template-columns:1fr}.st-tuner-face{min-height:430px}.st-prog-details{grid-template-columns:1fr}.st-genre-grid{grid-template-columns:1fr}.st-tool-head{padding:0 12px}.st-tuner-note{font-size:84px}
+}
+
+/* Preserve Stemmy's original top-bar controls when the two new tools are added. */
+.topacts{flex:0 0 auto;flex-wrap:nowrap;white-space:nowrap}
+.topacts .topact{flex:0 0 auto}
+#vizbtn{display:flex!important;visibility:visible!important;opacity:1!important}
+@media (max-width:1450px){
+  .topbar{gap:12px;padding-left:14px;padding-right:14px}
+  .topacts{gap:6px;margin-left:8px}
+  .topacts .topact{padding:7px 9px}
+  .topacts .topact span{display:none}
+}
+
+/* Theme-safe hover colors. The original green hover was hard-coded, so blue and
+   red themes briefly flashed green. Lighten the active theme color instead. */
+.play:hover,
+.btn.primary:hover,
+.st-button.primary:hover{
+  background:color-mix(in srgb,var(--green) 86%,white 14%)!important;
+  border-color:var(--green)!important;
+}

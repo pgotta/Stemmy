@@ -1,0 +1,85 @@
+@echo off
+setlocal enableextensions
+cd /d "%~dp0"
+title Stemmy v1.5 launcher
+
+
+REM Complete-source and environment preflight.
+for %%F in ("requirements.txt" "app\server.py" "app\pipeline.py" "app\templates\index.html") do (
+  if not exist "%%~F" (
+    echo [X] Missing required Stemmy file: %%~F
+    echo     Extract the COMPLETE Stemmy ZIP into an empty folder.
+    pause
+    exit /b 1
+  )
+)
+if not exist ".venv\Scripts\python.exe" (
+  echo [X] Stemmy is not installed yet. Run install_all.bat first.
+  pause
+  exit /b 1
+)
+
+REM ---------------------------------------------------------------------------
+REM Run Stemmy independently of any visible console window.
+REM This avoids console-focus/minimize/QuickEdit stalls and sends output to logs.
+REM sitecustomize.py marks the server AND Python model subprocesses HighQoS.
+REM ---------------------------------------------------------------------------
+
+set "PYEXE=%CD%\.venv\Scripts\python.exe"
+if exist "%PYEXE%" goto :python_ready
+
+set "PYEXE="
+for /f "delims=" %%P in ('where python 2^>nul') do if not defined PYEXE set "PYEXE=%%P"
+if defined PYEXE goto :python_ready
+
+echo [X] Python was not found. Run setup.bat first.
+pause
+exit /b 1
+
+:python_ready
+REM If Stemmy is already running, do not start a duplicate server.
+netstat -ano | findstr ":5002" | findstr "LISTENING" >nul 2>&1
+if not errorlevel 1 (
+  echo Stemmy is already running. Opening the studio window...
+  start "" /min powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%CD%\stemmy_window.ps1" -Url "http://127.0.0.1:5002" -Root "%CD%"
+  exit /b 0
+)
+
+if not exist "logs" mkdir "logs"
+set "STEMMY_ROOT=%CD%"
+set "STEMMY_PY=%PYEXE%"
+set "PYTHONUNBUFFERED=1"
+set "PYTHONPATH=%CD%;%PYTHONPATH%"
+
+REM Start Python hidden and detached. stdout/stderr remain available in logs\.
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$ErrorActionPreference='Stop';" ^
+  "$root=$env:STEMMY_ROOT; $py=$env:STEMMY_PY;" ^
+  "$out=Join-Path $root 'logs\stemmy.log'; $err=Join-Path $root 'logs\stemmy-error.log';" ^
+  "$p=Start-Process -FilePath $py -ArgumentList @('run_stemmy.py') -WorkingDirectory $root -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err -PassThru;" ^
+  "try { $p.PriorityClass=[System.Diagnostics.ProcessPriorityClass]::High } catch {}" ^
+  "Set-Content -LiteralPath (Join-Path $root '.stemmy.pid') -Value $p.Id"
+
+if errorlevel 1 (
+  echo [X] Stemmy could not be launched.
+  if exist "logs\stemmy-error.log" start "" notepad "logs\stemmy-error.log"
+  pause
+  exit /b 1
+)
+
+echo Starting Stemmy as a detached HighQoS background process...
+echo Logs: logs\stemmy.log and logs\stemmy-error.log
+
+timeout /t 5 >nul
+netstat -ano | findstr ":5002" | findstr "LISTENING" >nul 2>&1
+if errorlevel 1 (
+  echo.
+  echo [X] The server did not begin listening on port 5002.
+  echo     Opening the error log now.
+  if exist "logs\stemmy-error.log" start "" notepad "logs\stemmy-error.log"
+  pause
+  exit /b 1
+)
+
+start "" /min powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%CD%\stemmy_window.ps1" -Url "http://127.0.0.1:5002" -Root "%CD%"
+exit /b 0

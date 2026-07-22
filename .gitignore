@@ -10,10 +10,16 @@ projects/*
 !projects/.gitkeep
 uploads/*
 !uploads/.gitkeep
+logs/*
+!logs/.gitkeep
 karaoke_jobs/
 models_cache/
+.stemmy.pid
+.stemmy.browser.pid
+.stemmy-browser-profile/
 
-# local launchers kept off GitHub
+# Windows launchers are local/release-package files only.
+# BUILD.md and docs/launchers contain their exact current source.
 *.bat
 
 # OS / editor

@@ -1,0 +1,16 @@
+@echo off
+setlocal
+cd /d "%~dp0"
+title Create Stemmy Shortcut
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%CD%\create_stemmy_shortcut.ps1" -Root "%CD%"
+if errorlevel 1 (
+  echo.
+  echo [X] The shortcut could not be created.
+  pause
+  exit /b 1
+)
+
+echo.
+echo You can now launch Stemmy from the new desktop icon.
+pause

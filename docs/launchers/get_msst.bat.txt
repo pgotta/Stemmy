@@ -1,0 +1,91 @@
+@echo off
+setlocal enableextensions enabledelayedexpansion
+cd /d "%~dp0"
+title Stemmy - Install optional Extended MSST model
+
+if exist ".venv\Scripts\activate.bat" (
+  call ".venv\Scripts\activate.bat"
+) else (
+  echo [X] No .venv found. Run install_all.bat first.
+  pause
+  exit /b 1
+)
+
+if not exist "models_cache" mkdir "models_cache"
+if not exist "models_cache\msst_models" mkdir "models_cache\msst_models"
+
+set "MODEL_TYPE=bs_roformer"
+set "CFG_NAME=mvsep_mega_model_bs_roformer_53_stems.yaml"
+set "CKPT_NAME=mvsep_mega_model_bs_roformer_53_stems_v1.ckpt"
+set "REL=https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/download/v1.0.21"
+set "MSST_DEPS=ml-collections omegaconf PyYAML librosa matplotlib soundfile tqdm numpy beartype einops packaging rotary-embedding-torch PoPE-pytorch"
+
+echo ==========================================================
+echo   Stemmy - Optional Extended MSST Setup
+echo ==========================================================
+echo.
+echo Downloads ZFTurbo MSST and a roughly 2 GB 53-stem model.
+echo Quick, Standard and Deep do not require this.
+echo.
+
+echo [1/4] MSST inference code ...
+set "MSSTOK="
+if exist "models_cache\msst\inference.py" if exist "models_cache\msst\pyproject.toml" set "MSSTOK=1"
+if defined MSSTOK (
+  echo       present and complete - skipping.
+) else (
+  if exist "models_cache\msst" rmdir /s /q "models_cache\msst"
+  if exist "models_cache\_msst_tmp" rmdir /s /q "models_cache\_msst_tmp"
+  curl -fL -o "models_cache\msst.zip" "https://github.com/ZFTurbo/Music-Source-Separation-Training/archive/refs/heads/main.zip"
+  if errorlevel 1 goto :fail
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { Expand-Archive -LiteralPath 'models_cache\msst.zip' -DestinationPath 'models_cache\_msst_tmp' -Force; $inf = Get-ChildItem -Path 'models_cache\_msst_tmp' -Recurse -Filter 'inference.py' | Select-Object -First 1; if (-not $inf) { exit 3 }; $src = $inf.Directory.FullName; New-Item -ItemType Directory -Force -Path 'models_cache\msst' | Out-Null; Get-ChildItem -LiteralPath $src -Force | Move-Item -Destination 'models_cache\msst' -Force; exit 0 } catch { Write-Host ('[X] ' + $_.Exception.Message); exit 4 }"
+  if errorlevel 1 goto :fail
+  rmdir /s /q "models_cache\_msst_tmp" >nul 2>&1
+  del "models_cache\msst.zip" >nul 2>&1
+  if not exist "models_cache\msst\inference.py" goto :fail
+  if not exist "models_cache\msst\pyproject.toml" goto :fail
+)
+
+echo [2/4] Installing MSST inference dependencies ...
+python -m pip install %MSST_DEPS%
+if errorlevel 1 goto :fail
+python -c "import torch,sys;sys.exit(0 if torch.cuda.is_available() else 1)" >nul 2>&1
+if errorlevel 1 (
+  echo [X] CUDA PyTorch is not active. Run Repair Stemmy Installation.bat first.
+  goto :fail
+)
+
+echo [3/4] Downloading model config and checkpoint ...
+if exist "models_cache\msst_models\%CFG_NAME%" for %%F in ("models_cache\msst_models\%CFG_NAME%") do if %%~zF LSS 200 del "models_cache\msst_models\%CFG_NAME%"
+if not exist "models_cache\msst_models\%CFG_NAME%" (
+  curl -fL -o "models_cache\msst_models\%CFG_NAME%" "%REL%/%CFG_NAME%"
+  if errorlevel 1 goto :fail
+)
+if exist "models_cache\msst_models\%CKPT_NAME%" for %%F in ("models_cache\msst_models\%CKPT_NAME%") do if %%~zF LSS 50000000 del "models_cache\msst_models\%CKPT_NAME%"
+if not exist "models_cache\msst_models\%CKPT_NAME%" (
+  echo       downloading checkpoint - this may take a while ...
+  curl -fL -o "models_cache\msst_models\%CKPT_NAME%" "%REL%/%CKPT_NAME%"
+  if errorlevel 1 goto :fail
+)
+set "SZ="
+for %%F in ("models_cache\msst_models\%CKPT_NAME%") do set "SZ=%%~zF"
+if not defined SZ goto :fail
+if !SZ! LSS 50000000 goto :fail
+
+echo [4/4] Writing manifest ...
+> "models_cache\msst_models\manifest.json" echo {"model_type":"%MODEL_TYPE%","config":"%CFG_NAME%","checkpoint":"%CKPT_NAME%"}
+
+echo.
+echo [OK] Extended MSST setup completed.
+echo      Restart Stemmy and choose Extended.
+echo.
+pause
+exit /b 0
+
+:fail
+echo.
+echo [X] Extended MSST setup failed. Stemmy still works normally with
+echo     Quick, Standard and Deep. Re-run this file to retry.
+echo.
+pause
+exit /b 1

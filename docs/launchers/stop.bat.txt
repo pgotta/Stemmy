@@ -1,0 +1,22 @@
+@echo off
+setlocal EnableDelayedExpansion
+cd /d "%~dp0"
+set "FOUND=0"
+
+for /f "tokens=5" %%P in ('netstat -ano ^| findstr ":5002" ^| findstr "LISTENING"') do (
+  taskkill /F /PID %%P >nul 2>&1
+  set "FOUND=1"
+)
+
+if exist ".stemmy.browser.pid" (
+  set /p BPID=<".stemmy.browser.pid"
+  taskkill /F /PID !BPID! >nul 2>&1
+  del /q ".stemmy.browser.pid" >nul 2>&1
+)
+
+if "!FOUND!"=="1" (
+  echo Stemmy stopped.
+) else (
+  echo Stemmy was not running.
+)
+timeout /t 2 >nul

@@ -1,0 +1,42 @@
+@echo off
+setlocal EnableExtensions
+cd /d "%~dp0"
+title Stemmy - Background GPU Check
+
+echo ==========================================================
+echo   Stemmy Background GPU Protection
+echo ==========================================================
+echo.
+
+if not exist ".venv\Scripts\python.exe" (
+  echo [X] No .venv was found. Run install_all.bat first.
+  pause
+  exit /b 1
+)
+
+if not exist "sitecustomize.py" (
+  echo [X] sitecustomize.py is missing.
+  pause
+  exit /b 1
+)
+
+if not exist "stemmy_windows_performance.py" (
+  echo [X] stemmy_windows_performance.py is missing.
+  pause
+  exit /b 1
+)
+
+set "PYTHONPATH=%CD%;%PYTHONPATH%"
+".venv\Scripts\python.exe" -c "from stemmy_windows_performance import apply_windows_performance_policy as a; s=a(); print('High priority:',s.get('high_priority','n/a')); print('HighQoS:',s.get('high_qos','n/a')); print('Status:',s)"
+if errorlevel 1 (
+  echo.
+  echo [X] Background GPU protection check failed.
+  pause
+  exit /b 1
+)
+
+echo.
+echo [OK] The process-level background GPU fix is installed.
+echo      It is applied automatically whenever Stemmy starts.
+echo.
+pause

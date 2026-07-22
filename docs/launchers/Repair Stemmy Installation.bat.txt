@@ -1,0 +1,16 @@
+@echo off
+cd /d "%~dp0"
+title Stemmy - Repair Installation
+echo ==========================================================
+echo   Stemmy v1.5 Installation Repair
+echo ==========================================================
+echo.
+echo This keeps the existing .venv whenever possible and repairs:
+echo   - core Python dependencies
+echo   - matched CUDA PyTorch / TorchVision / TorchAudio
+echo   - Shazam song identification
+echo   - Basic Pitch MIDI / Tab ONNX support
+echo   - background GPU protection and desktop shortcut
+echo.
+call install_all.bat
+exit /b %errorlevel%

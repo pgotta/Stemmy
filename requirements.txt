@@ -1,27 +1,26 @@
-# ---- Stemmy requirements ----
-# NOTE: torch is deliberately NOT listed here. A bare "torch" line resolves to
-# the CPU-only PyPI wheel, which will not use a Blackwell (RTX 50-series) GPU,
-# and a "+cu128" pin is not portable across machines/Python versions. So setup.bat
-# installs these requirements first, then force-installs the correct CUDA build
-# from the cu128 index LAST (otherwise audio-separator drags a CPU torch back in):
+# ---- Stemmy v1.5 core requirements ----
 #
-#   pip install -r requirements.txt
-#   pip install --force-reinstall --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cu128
+# The tested Windows/RTX 50-series stack is installed by install_all.bat after
+# these packages so audio-separator cannot leave a CPU-only or mismatched build:
 #
-# Verify the GPU is seen:  python -c "import torch; print(torch.cuda.is_available())"
-# (Blackwell sm_120 needs cu128 or newer; on a different GPU swap the index URL.)
+#   torch==2.11.0+cu128
+#   torchvision==0.26.0+cu128
+#   torchaudio==2.11.0+cu128
+#
+# Do not add a bare torch/torchvision/torchaudio pin here. The correct wheel
+# index depends on the GPU and platform.
 
 Flask>=3.0
 
-# separation engine — pulls onnxruntime-gpu + model downloaders
+# Separation engine; includes onnxruntime-gpu and model download helpers.
 audio-separator[gpu]>=0.18
 
-# tempo / key / beat analysis (baseline). Optional upgrades: madmom, beat-this
+# Tempo, key and beat analysis.
 librosa>=0.10
 soundfile>=0.12
 numpy>=1.24
 psutil>=5.9
 
-# YouTube link import (audio fetch + extraction)
+# YouTube import and bundled FFmpeg helper.
 yt-dlp
 imageio-ffmpeg
