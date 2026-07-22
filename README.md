@@ -1,54 +1,54 @@
 # Stemmy
 
-A local, GPU-accelerated **stem-separation, remix, karaoke, and music-practice studio** for Windows.
+A local, GPU-accelerated **stem-separation studio** for Windows. Drop in a song or paste a YouTube link, separate it into vocals, bass, drums and sub-drums, guitar, piano, keys, and other stems, then mix, practice, identify songs, display lyrics, generate chords, tune an instrument, and export the results.
 
-Drop in an audio file or paste a YouTube link, split the song into stems, mix and export them, follow chords and lyrics, remove vocals from a playlist, tune an instrument, or generate chord progressions. Separation runs locally on your NVIDIA GPU; uploaded audio is not sent to a cloud service.
+Everything runs on your own machine. Audio separation, playback, mixing, analysis, tuner processing, and chord generation stay local.
 
 ![Stemmy studio](docs/screenshots/studio.png)
 
-## Highlights
+## Current feature set
 
-- **Multi-stage source separation:** vocals, bass, drums, guitar, piano, keys, other, plus a detailed drum split.
-- **Full local studio:** solo, mute, level, pan, zoomable real waveforms, pitch/tempo adjustment, A-B looping, chord ribbon, and per-stem export.
-- **Karaoke mode:** remove vocals from a single video or full YouTube playlist, save sessions, retry failures, and play the instrumentals in a full-screen queue.
-- **Lyrics and song identification:** Shazam identification plus synced LRCLIB lyrics, with broader metadata matching and plain-text fallbacks.
-- **MilkDrop visualizer:** Butterchurn/MilkDrop 2 presets in both Studio and Karaoke, with an independent album-cover backdrop.
-- **Chromatic tuner:** stable local microphone/audio-interface tuner with Standard and alternate guitar tunings.
-- **Chord Creator:** local, deterministic progression ideas across multiple genres; no AI service or API required.
-- **Windows app-style launcher:** hidden background server, dedicated browser app window, desktop shortcut/icon, and close-window shutdown.
-- **Safer maintenance:** background update checks with individual, opt-in updates for internet-facing helper packages. CUDA/model packages remain protected.
+- **GPU stem separation:** Quick, Standard, Deep, and optional Extended workflows.
+- **Deep drum breakdown:** kick, snare, toms, hi-hat, ride, and crash nested beneath the drum stem.
+- **Full local mixer:** solo, mute, volume, pan, real waveforms, zoom, scrubbing, pitch shift, tempo change, and per-stem downloads.
+- **Karaoke mode:** download a playlist, remove vocals, save sessions, retry failures, play tracks full-screen, auto-advance, and show a queue.
+- **Automatic song ID and lyrics:** Shazam identification followed by synced or plain lyric lookup, with detailed diagnostics and manual title/artist fallback.
+- **MilkDrop visualizer:** Butterchurn/MilkDrop 2 presets plus independent album-cover backgrounds in Studio and Karaoke.
+- **Chromatic tuner:** stable local microphone/audio-interface tuner with Standard tuning selected by default and several alternate guitar tunings.
+- **Chord Creator:** local multi-genre progression generation with playback, Roman numerals, transposition, variations, diagrams, capo suggestions, and saved favorites.
+- **MIDI and ASCII tab export:** optional Basic Pitch/ONNX transcription per stem.
+- **Theme support:** green, blue, and red schemes with theme-matched hover states.
+- **Export Save As:** whole-project ZIP export can use the browser's Save As picker where supported.
+- **Background dependency checks:** safe helper packages can be checked and updated individually from Settings.
+- **Windows app-style launcher:** hidden background server, dedicated maximized browser app window, desktop shortcut/icon, and close-window shutdown.
 
 ## Screenshots
 
-**Separation passes**
+**Live separation passes:**
 
 ![Separation passes](docs/screenshots/passes.png)
 
-**Studio mixer**
+**Mixing studio:**
 
 ![Mixing](docs/screenshots/mixing.png)
 
-**Karaoke mode**
+**Karaoke mode:**
 
-![Karaoke mode](docs/screenshots/Karaoke1.png)
+![Karaoke Mode](docs/screenshots/Karaoke1.png)
 
-## Requirements
+## Tested configuration
 
-Stemmy has been developed and tested primarily on:
-
-| Component | Tested configuration |
+| Component | Tested value |
 |---|---|
 | OS | Windows 11 |
 | GPU | NVIDIA GeForce RTX 5060 Laptop GPU, 8 GB VRAM |
+| RAM | 16 GB |
 | Python | 3.12 |
 | PyTorch | CUDA 12.8 build |
-| System RAM | 16 GB for Quick/Standard/Deep; more strongly recommended for Extended |
 
-Use **Python 3.10 through 3.13**. Python 3.14 is currently too new for several packages in the audio stack.
+Python **3.10-3.13** is supported by the current setup scripts; Python 3.12 is the most thoroughly tested. Python 3.14 remains too new for several optional audio packages.
 
-An NVIDIA GPU is strongly recommended. CPU-only execution is possible but separation will be very slow.
-
-Budget roughly **15–25 GB of free disk space** for the virtual environment, downloaded models, and uncompressed per-song stems.
+Budget roughly **15-25 GB free** for the virtual environment, PyTorch, cached models, and uncompressed output stems. Extended separation can require substantially more system RAM than Quick, Standard, or Deep.
 
 ## Quick start
 
@@ -58,11 +58,11 @@ The packaged Windows build includes the local launchers and app-style shortcut t
 
 1. Extract the package over the Stemmy folder and allow Windows to replace files.
 2. On a first installation, run `install_all.bat` or `setup.bat`.
-3. For later updates that only replace Stemmy source files, **do not run setup again**.
-4. Start Stemmy with `run.bat`.
-5. Run `Create Stemmy Shortcut.bat` once to create a desktop shortcut with the Stemmy icon.
+3. `install_all.bat` automatically creates or refreshes the Stemmy desktop shortcut and icon.
+4. For later source-only overlays, **do not run setup again**.
+5. Start Stemmy from the desktop shortcut or with `run.bat`. `Create Stemmy Shortcut.bat` remains available as a repair tool.
 
-Stemmy opens in a dedicated Edge or Chrome app window when available. Closing that window with **X** shuts down the local Python server as well. `stop.bat` remains an emergency fallback.
+Stemmy opens maximized in a dedicated Edge or Chrome app window when available. Closing that window with **X** shuts down the local Python server as well. `stop.bat` remains an emergency fallback.
 
 See [BUILD.md](BUILD.md) for the full Windows launcher workflow and troubleshooting.
 
@@ -79,201 +79,165 @@ pip install -r requirements.txt
 rem RTX 50-series / CUDA 12.8 example:
 pip install --force-reinstall --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cu128
 
-python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU')"
 python run_stemmy.py
 ```
 
-Use the PyTorch CUDA index appropriate for your GPU and driver. The CUDA build is installed **after** `requirements.txt` so another dependency cannot replace it with a CPU-only wheel.
+Open `http://127.0.0.1:5002`.
 
-Open `http://127.0.0.1:5002` if the browser does not open automatically.
+Install the CUDA PyTorch build **after** `requirements.txt`. Some dependency installers can otherwise replace it with CPU-only PyTorch.
 
 ## Separation depths
 
-| Depth | Main result | Pipeline |
+| Depth | Typical output | Pipeline |
 |---|---|---|
 | **Quick** | 4 stems | vocals, drums, bass, other |
-| **Standard** | 6 stems | Quick plus guitar and piano |
-| **Deep** | up to 13 stems | Standard plus detailed drum separation and analysis |
-| **Extended** | many instrument classes | Optional ZFTurbo MSST 53-stem model; experimental and RAM-heavy |
+| **Standard** | 6 stems | adds guitar and piano |
+| **Deep** | up to 13 stems | Standard plus the detailed DrumSep pass and analysis |
+| **Extended** | many stems | optional ZFTurbo MSST multi-instrument model |
 
-Models run sequentially and are unloaded between passes to reduce peak VRAM use.
-
-Deep runs the isolated drum stem through a dedicated DrumSep model for kick, snare, toms, hi-hat, ride, and crash. An optional pass can fail or run out of memory without destroying the rest of a completed separation.
-
-Extended prefers full-song inference when enough system RAM is available and can fall back to chunked inference. Expect substantially greater RAM use and longer processing times.
+Models run sequentially and free VRAM between passes. Completed output is persisted under `projects/<id>/`, allowing finished projects and interrupted work to be restored.
 
 ## Studio
 
 The Studio includes:
 
-- Per-stem solo, mute, level, pan, selection, and download controls.
-- Sample-locked playback across decoded stems.
-- Real waveforms with an overview and 1x–100x zoom.
-- Pitch shifting and tempo adjustment.
-- Detected-beat metronome with meter, feel, downbeat shift, and tap-tempo controls.
-- Live chord readout and a scrolling chord ribbon.
-- A-B loop markers on both the main transport and overview.
-- Active/A-Z channel sorting and a hide-below-peak control.
-- Green, blue, and red interface themes with theme-aware hover states.
-- Export-selected and Export-all workflows. Supported browsers can show a Save As picker before writing the ZIP.
-- Recent sessions and resumable unfinished projects.
-
-The metronome's default source is the original **detected track beats**. A steady/tap-tempo mode remains available as a manual practice option.
+- Per-stem solo, mute, pan, level, selection, and download controls.
+- Real waveforms and an overview strip with 1x-100x zoom.
+- Pitch shifting and playback-tempo controls.
+- Detected-track metronome behavior with meter, beat alignment, and feel controls.
+- Live chord readout and scrolling chord ribbon.
+- A-B loop controls and loop markers.
+- Channel sorting and hide-below-peak filtering.
+- Recent-session restore and unfinished-project resume.
+- Live CPU/GPU status in the lower-left panel.
+- Green, blue, and red UI themes.
+- Save As behavior for full ZIP export where the browser supports the File System Access API.
 
 ## Tuner
 
-The **Tuner** opens as a focused full-screen tool and defaults to **Standard** tuning.
+The **Tuner** button opens a local chromatic tuner using a microphone or connected audio interface.
 
-Features include:
-
-- Chromatic note detection with sharps/flats.
-- Standard, half-step down, Drop D, D Standard, Drop C#, Drop C, Open G, and Open D presets.
-- Selectable microphone or audio-interface input.
-- Adjustable A4 reference.
-- Confidence filtering, smoothing, and note-lock hysteresis to reduce unstable jumping.
-- Automatic release of the input device when the tuner closes.
-
-The tuner stops other Stemmy/Karaoke playback before listening so the app does not tune itself.
+- Standard tuning is selected by default.
+- Alternate presets include half-step down, Drop D, D Standard, Drop C sharp, Drop C, Open G, and Open D.
+- A4 reference is adjustable.
+- Input-device selection is supported.
+- Pitch smoothing and note-locking reduce unstable note changes.
+- Stemmy/Karaoke audio stops before microphone listening begins, and the input is released when the tuner closes.
 
 ## Chord Creator
 
-The **Chord Creator** generates local progression ideas without an LLM or external service.
+The **Chord Creator** generates progressions locally without an AI or cloud API.
 
-Choose a starting chord, key feel, length, and one or more genres:
+Genres can be selected individually or combined, including pop, classic rock, alternative rock, post-hardcore, metalcore, punk/pop-punk, indie, blues, folk/country, funk/R&B, jazz, and cinematic/synthwave.
 
-- Pop
-- Classic rock
-- Alternative rock
-- Post-hardcore
-- Metalcore
-- Punk / pop-punk
-- Indie
-- Blues
-- Folk / country
-- Funk / R&B
-- Jazz
-- Cinematic / synthwave
+Choose a starting chord and length, then generate progression options with:
 
-Each result includes key context, Roman numerals, a strumming idea, preview playback, transposition, chord replacement, diagrams, copy/save controls, and easier guitar-shape/capo suggestions.
+- Roman-numeral analysis.
+- Genre/key context.
+- Preview playback.
+- Per-chord replacement.
+- Semitone transposition.
+- Variation generation.
+- Chord diagrams.
+- Easy-shape and capo suggestions.
+- Copying and local favorites.
 
 ## Karaoke
 
-Karaoke mode accepts a YouTube playlist or single video. For each track Stemmy:
+Karaoke mode accepts a YouTube playlist or single link, processes one track at a time, removes vocals, and creates instrumental WAV/MP3 files.
 
-1. Downloads the original audio.
-2. Identifies the song from the original pre-separation audio when Shazam is available.
-3. Fetches lyrics and artwork.
-4. Runs a Quick vocal-removal separation.
-5. Mixes the non-vocal stems into an instrumental.
-6. Saves the result for playback and ZIP export.
+The player includes:
 
-Finished batches persist under `karaoke_jobs/`, survive a restart, and can be reopened later. Missing files are detected instead of being presented as playable. Failed tracks can be retried without reprocessing successful tracks.
+- Full-screen synced lyrics.
+- Previous, play/pause, and next controls.
+- Auto-advance.
+- A navigable queue.
+- Per-track album art.
+- Independent MilkDrop and cover-art backgrounds.
+- Persistent saved sessions.
+- Retry Failed for transient YouTube or separation errors.
 
-The full-screen player includes synced lyrics, previous/next controls, auto-advance, a jumpable queue, MilkDrop presets, and an optional per-track album-cover background.
-
-Only download media you have the right to use.
+Only download material you have the right to use.
 
 ## Lyrics and song identification
 
-When a Studio project or Karaoke track is loaded, the current Windows build attempts lyrics automatically:
+Studio and Karaoke automatically attempt to identify each loaded track using ShazamIO, then fetch lyrics.
 
-1. Shazam identifies the original audio when `shazamio` is installed.
-2. LRCLIB exact metadata lookup is attempted.
-3. Broader and cleaned title/artist variants are tried when metadata differs.
-4. Plain-text lyric fallbacks may be used when synced lyrics are unavailable.
-5. Existing saved lyrics are not discarded because of a temporary provider miss.
+The current lyric flow:
 
-Manual title and artist fields remain available when automatic identification or lookup cannot find a result.
+1. Identifies the song from the original audio.
+2. Tries exact lyric metadata.
+3. Tries broad and cleaned title/artist searches.
+4. Accepts synced or plain lyric results.
+5. Preserves previously saved lyrics when a temporary provider request fails.
+6. Falls back to manual title/artist entry when no provider has a match.
 
-Lyric diagnostics are written to:
-
-```text
-logs/stemmy-lyrics.log
-```
-
-Shazam and lyric providers require an internet connection. Audio separation itself remains local.
+Detailed lyric activity is written to `logs/stemmy-lyrics.log`.
 
 ## Visualizer
 
-The Studio and Karaoke player use locally bundled **Butterchurn**, a WebGL implementation of MilkDrop 2.
+The Studio and Karaoke player use locally bundled Butterchurn/MilkDrop 2 presets.
 
-The visualizer and album-cover backdrop are independent:
-
-- Visualizer only
-- Cover only
-- Both
-- Neither
-
-Preset and opacity preferences can be remembered, while both visual layers start disabled for a clean default view. A modern browser with WebGL2 is required.
-
-## Windows launcher and background GPU behavior
-
-The current Windows launcher does not depend on a focused PowerShell console:
-
-- Python runs detached from the visible console.
-- Stemmy Python processes are marked with high-priority/high-QoS settings.
-- Output is redirected to files under `logs/`.
-- The browser is opened as a dedicated Edge/Chrome app window when available.
-- Closing the app window stops the server.
-- Settings includes a separate **Close Stemmy** action.
-
-This resolves the laptop behavior where GPU utilization dropped sharply when the console was minimized or lost focus.
-
-Useful logs include:
-
-```text
-logs/stemmy.log
-logs/stemmy-error.log
-logs/stemmy-performance.log
-logs/stemmy-lyrics.log
-logs/stemmy-update.log
-```
+MilkDrop and album-cover backgrounds are independent: either can be enabled alone, both can be layered, or both can remain off. Preset and opacity preferences are retained while the visualizer and cover layers start disabled on a new launch.
 
 ## Updates
 
-Stemmy checks dependency status quietly in the background and shows the result under **Settings -> Updates**.
+Stemmy performs a quiet dependency-status check in the background. Open **Settings -> Updates** to review it.
 
-The interface allows individual, opt-in updates for frequently changing online helpers such as:
+Safe helper packages can be updated individually:
 
 - `yt-dlp`
 - `shazamio`
 - `imageio-ffmpeg`
 
-Individual updates are isolated with `--no-deps`, followed by a compatibility check. If the check fails, Stemmy attempts to restore the previous version.
+Each update is isolated with `--no-deps`, followed by a compatibility check and automatic rollback if that check fails.
 
-Core numerical and GPU packages are **report-only/protected**, including PyTorch/CUDA, `audio-separator`, ONNX, and NumPy. These should be updated deliberately because an otherwise routine package upgrade can break model or CUDA compatibility.
+GPU/model-stack packages such as PyTorch, CUDA-related packages, `audio-separator`, ONNX components, and NumPy remain protected/report-only. Do not blindly update those packages from the UI.
 
-## Optional MIDI and tab export
+## Windows launcher and background GPU behavior
 
-`get_tabs.bat` installs Basic Pitch and an ONNX runtime for per-stem audio-to-MIDI transcription.
+The current Windows launcher opens Stemmy in a dedicated maximized Edge/Chrome app window and does not depend on a focused PowerShell console:
 
-MIDI is the dependable output. ASCII guitar/bass tab is a practice aid: it cannot represent all rhythm and polyphonic fingering information accurately. Drum stems can export MIDI but do not map to string tab.
+- Python runs detached and hidden.
+- Output goes to `logs/stemmy.log` and `logs/stemmy-error.log`.
+- Stemmy and relevant Python child processes receive high-priority/high-QoS treatment.
+- The policy is re-applied to model subprocesses.
+- GPU separation continues when the app loses focus or is minimized.
+- Closing the dedicated app window requests a safe local server shutdown.
 
-## Data locations
-
-```text
-app/             application backend and UI
-projects/        per-song source, stems, metadata, lyrics, and artwork
-uploads/         temporary downloaded/uploaded audio
-karaoke_jobs/    persisted Karaoke batch state
-models_cache/    downloaded separation models
-logs/            launcher, performance, update, and lyric diagnostics
-```
-
-The generated project, upload, model, job, and log data should remain outside version control.
+Performance-policy events are written to `logs/stemmy-performance.log`.
 
 ## Honest limitations
 
-- Separating two guitars into reliable rhythm/lead or clean/distorted roles remains a difficult unsolved source-separation problem.
-- Key-family sub-splits depend on the available model and may be skipped.
-- Chord recognition is a practical local estimate, not a professional transcription.
-- Tuner accuracy depends on a clean input signal and the selected audio device.
-- Karaoke downloads can occasionally fail when YouTube changes its delivery signatures; keep `yt-dlp` current.
-- Lyrics depend on third-party identification and lyric metadata and cannot be guaranteed for every recording.
-- Extended separation is experimental, slow, and RAM-heavy.
+- Separating two performances of the same instrument, such as rhythm vs lead guitar or clean vs distorted guitar, remains unreliable with current source-separation models.
+- The detailed drum split is much more dependable than same-instrument guitar splitting.
+- Extended separation is experimental and RAM-heavy.
+- Shazam, lyrics, YouTube import, and update checking require internet access even though model inference and audio processing remain local.
+- Browser autoplay rules may require pressing Play once in the Karaoke player.
+- YouTube changes can temporarily break downloads; update `yt-dlp` individually and use Retry Failed.
 
-For dependable vocals, bass, guitar/piano, and detailed drums on an 8 GB GPU, use **Deep**.
+## Project layout
+
+```text
+app/
+  server.py                 Flask routes and separation stream
+  pipeline.py               model-pass orchestration
+  models.py                 depth/model configuration
+  analysis.py               tempo and beat analysis
+  projects.py               persistent project state
+  karaoke.py                Karaoke jobs and saved sessions
+  identify.py               Shazam and lyric providers
+  tools_ui.py               isolated Tuner/Chord Creator integration
+  maintenance.py            update checker and shutdown support
+  static/stemmy-tools/      modular Tuner/Chord Creator/maintenance JS
+  templates/index.html      main application UI
+projects/        separated project output, gitignored
+uploads/         source audio, gitignored
+karaoke_jobs/    saved Karaoke sessions, gitignored
+models_cache/    downloaded model files, gitignored
+logs/            launcher, performance, update, and lyric diagnostics
+```
 
 ## License
 
-[MIT](LICENSE). Stemmy is provided without warranty. Bundled and optional models retain their own licenses.
+[MIT](LICENSE). Third-party models and bundled libraries retain their respective licenses.
